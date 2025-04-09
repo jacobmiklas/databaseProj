@@ -7,10 +7,7 @@ const sql = neon(process.env.DATABASE_URL);
 // Register a new user
 export async function createUser(username, hashedPassword) {
   try {
-    await sql(
-      'INSERT INTO users (username, password) VALUES ($1, $2)',
-      [username, hashedPassword]
-    );
+    await sql`INSERT INTO users (username, password) VALUES (${username}, ${hashedPassword})`;
     return { success: true };
   } catch (error) {
     console.error('Create user error:', error);
@@ -21,10 +18,7 @@ export async function createUser(username, hashedPassword) {
 // Get a user by username
 export async function getUserByUsername(username) {
   try {
-    const result = await sql(
-      'SELECT * FROM users WHERE username = $1',
-      [username]
-    );
+    const result = await sql`SELECT * FROM users WHERE username = ${username}`;
     return result[0] || null;
   } catch (error) {
     console.error('Get user error:', error);
