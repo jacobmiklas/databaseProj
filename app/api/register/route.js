@@ -1,6 +1,6 @@
-import { db } from '../../../lib/db'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
+import { createUser } from '@/app/actions'
 
 export async function POST(req) {
   const { username, password } = await req.json()
@@ -11,18 +11,17 @@ export async function POST(req) {
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  try {
-    await db.query('INSERT INTO users (username, password) VALUES (?, ?)', [
-      username,
-      hashedPassword,
-    ])
-    return NextResponse.json({ message: 'User registered successfully!' })
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return NextResponse.json({ message: 'Username already taken' }, { status: 409 })
-    }
+  const result = await createUser(username, hashedPassword)
 
-    console.error('Registration error:', error)
+  if (result.success) {
+    return NextResponse.json({ message: 'User registered successfully!' })
+  } else if (
+    result.error &&
+    result.error.includes('duplicate key value violates unique constraint')
+  ) {
+    return NextResponse.json({ message: 'Username already taken' }, { status: 409 })
+  } else {
+    console.error('Registration error:', result.error)
     return NextResponse.json({ message: 'Server error during registration' }, { status: 500 })
   }
 }

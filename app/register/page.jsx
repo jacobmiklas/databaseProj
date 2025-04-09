@@ -14,9 +14,10 @@ export default function RegisterPage() {
   const validatePassword = (password) => {
     const hasLetter = /[a-zA-Z]/.test(password)
     const hasNumber = /\d/.test(password)
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
     const isLongEnough = password.length >= 8
 
-    return hasLetter && hasNumber && isLongEnough
+    return hasLetter && hasNumber && isLongEnough && hasSpecial
   }
 
   const handleSubmit = async (e) => {
