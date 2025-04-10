@@ -26,7 +26,7 @@ export default function RegisterPage() {
     // Client-side password validation
     if (!validatePassword(password)) {
       setPasswordError(
-        'Password must be at least 8 characters long, contain at least one letter and one number.'
+        'Password must be at least 8 characters long, contain at least one special character, and one number.'
       )
       return
     }
@@ -53,33 +53,70 @@ export default function RegisterPage() {
   }
 
   return (
-    <main style={{ padding: 20 }}>
-      <h2>Register</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        /><br /><br />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        /><br />
-        {passwordError && <p style={{ color: 'red' }}>{passwordError}</p>}
-        <br />
-        <button type="submit">Register</button>
+    <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded-xl shadow-md w-full max-w-md space-y-4"
+      >
+        <div className="flex justify-center">
+          <img
+            src="/teamLogo.png"
+            alt="Team Logo"
+            className="h-16 w-16 object-contain mb-2"
+          />
+        </div>
+
+        <h2 className="text-2xl font-bold text-center text-gray-800">Register</h2>
+
+        <div className="flex justify-center">
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-[300px] px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex justify-center">
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-[300px] px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {passwordError && (
+          <p className="text-red-500 text-sm text-center">{passwordError}</p>
+        )}
+
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            className="w-[120px] bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+          >
+            Register
+          </button>
+        </div>
+
+        {message && (
+          <p className="text-center text-sm text-gray-700">{message}</p>
+        )}
+
+        {success && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => router.push('/login')}
+              className="mt-2 text-blue-600 underline hover:text-blue-800 text-sm"
+            >
+              Go to Login
+            </button>
+          </div>
+        )}
       </form>
-
-      {message && <p>{message}</p>}
-
-      {success && (
-        <button onClick={() => router.push('/login')}>
-          Go to Login
-        </button>
-      )}
     </main>
   )
 }
