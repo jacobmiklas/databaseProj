@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { getUserByUsername } from '@/app/actions'
+import { getUserByUsername } from '../../actions'
 
 export async function POST(req) {
   const { username, password } = await req.json()
@@ -19,12 +19,12 @@ export async function POST(req) {
     const isMatch = await bcrypt.compare(password, user.password)
 
     if (!isMatch) {
-      return NextResponse.json({ message: 'Incorrect password' }, { status: 401 })
+      return NextResponse.json({ message: 'Invalid password' }, { status: 401 })
     }
 
-    return NextResponse.json({ message: 'Login successful' })
+    return NextResponse.json({ message: 'Login successful' }, { status: 200 })
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json({ message: 'Server error during login' }, { status: 500 })
+    return NextResponse.json({ message: 'Server error' }, { status: 500 })
   }
 }
