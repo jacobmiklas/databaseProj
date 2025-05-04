@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { createUser } from '@/app/actions'
+import { createUser } from '../../actions'
 
 export async function POST(req) {
   const { username, password } = await req.json()
