@@ -1,3 +1,4 @@
+// app/api/login/route.js
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getUserByUsername } from '../../actions'
@@ -22,6 +23,7 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Invalid password' }, { status: 401 })
     }
 
+    // On success, just return OK—client will store username in localStorage
     return NextResponse.json({ message: 'Login successful' }, { status: 200 })
   } catch (error) {
     console.error('Login error:', error)

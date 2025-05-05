@@ -1,59 +1,55 @@
-'use client'
+// app/register/page.jsx
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [passwordError, setPasswordError] = useState('')
-  const router = useRouter()
+  const [username, setUsername]       = useState('');
+  const [password, setPassword]       = useState('');
+  const [message, setMessage]         = useState('');
+  const [success, setSuccess]         = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const router = useRouter();
 
-  const validatePassword = (password) => {
-    const hasLetter = /[a-zA-Z]/.test(password)
-    const hasNumber = /\d/.test(password)
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    const isLongEnough = password.length >= 8
-
-    return hasLetter && hasNumber && isLongEnough && hasSpecial
-  }
+  const validatePassword = (pwd) => {
+    const hasLetter  = /[a-zA-Z]/.test(pwd);
+    const hasNumber  = /\d/.test(pwd);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
+    return pwd.length >= 8 && hasLetter && hasNumber && hasSpecial;
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    // Client-side password validation
     if (!validatePassword(password)) {
       setPasswordError(
         'Password must be at least 8 characters long, contain at least one special character, and one number.'
-      )
-      return
+      );
+      return;
     }
-
-    setPasswordError('') // Clear any previous errors
+    setPasswordError('');
 
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
-    })
+    });
 
-    const data = await res.json()
-
+    const data = await res.json();
     if (res.ok) {
-      setSuccess(true)
-      setMessage(data.message)
-      setUsername('')
-      setPassword('')
+      setSuccess(true);
+      setMessage(data.message);
+      setUsername('');
+      setPassword('');
     } else {
-      setMessage(data.message || 'Registration failed')
-      setSuccess(false)
+      setSuccess(false);
+      setMessage(data.message || 'Registration failed');
     }
-  }
+  };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
       <form
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-xl shadow-md w-full max-w-md space-y-4"
@@ -66,7 +62,9 @@ export default function RegisterPage() {
           />
         </div>
 
-        <h2 className="text-2xl font-bold text-center text-gray-800">Register</h2>
+        <h2 className="text-2xl font-bold text-center text-gray-800">
+          Register
+        </h2>
 
         <div className="flex justify-center">
           <input
@@ -117,6 +115,19 @@ export default function RegisterPage() {
           </div>
         )}
       </form>
+
+      {/* Login prompt */}
+      <div className="mt-4 text-center">
+        <p className="text-sm text-gray-700">
+          Already registered? Login{' '}
+          <a
+            href="/login"
+            className="underline text-blue-600 hover:text-blue-800"
+          >
+            here!
+          </a>
+        </p>
+      </div>
     </main>
-  )
+  );
 }
