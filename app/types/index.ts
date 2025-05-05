@@ -49,6 +49,8 @@ export interface MatchStats {
     fouls_away: number;
     corners_home: number;
     corners_away: number;
+    home_score: number;
+    away_score: number;
 }
 
 export interface PlayerMatchStats {
@@ -56,6 +58,7 @@ export interface PlayerMatchStats {
     player_id: number;
     shots: number;
     shots_on_target: number;
+    goals: number;
     assists: number;
     minutes_played: number;
     yellow_cards: number;

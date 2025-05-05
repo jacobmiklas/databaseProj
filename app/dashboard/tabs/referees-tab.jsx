@@ -30,8 +30,8 @@ export default function RefereesTab() {
         SELECT 
           r.*,
           COUNT(m.match_id) as matches_officiated
-        FROM referee r
-        LEFT JOIN match m ON r.referee_id = m.referee_id
+        FROM referees r
+        LEFT JOIN matches m ON r.referee_id = m.referee_id
         GROUP BY r.referee_id
         ORDER BY r.last_name, r.first_name
       `;

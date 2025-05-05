@@ -8,11 +8,11 @@ const sql = neon(process.env.DATABASE_URL);
 async function seedData() {
   try {
     // Clear existing data
-    await sql`TRUNCATE TABLE player_match_stats, match_stats, match, player, team, referee, league CASCADE`;
+    await sql`TRUNCATE TABLE player_match_stats, match_stats, matches, players, teams, referees, leagues CASCADE`;
 
     // Insert leagues
     const leagues = await sql`
-      INSERT INTO league (name, city, country) VALUES
+      INSERT INTO leagues (name, city, country) VALUES
         ('Premier League', 'London', 'England'),
         ('La Liga', 'Madrid', 'Spain'),
         ('Bundesliga', 'Berlin', 'Germany'),
@@ -23,7 +23,7 @@ async function seedData() {
 
     // Insert teams
     const teams = await sql`
-      INSERT INTO team (team_name, league_id, coach_name) VALUES
+      INSERT INTO teams (team_name, league_id, coach_name) VALUES
         ('Manchester United', ${leagues[0].league_id}, 'Erik ten Hag'),
         ('Liverpool', ${leagues[0].league_id}, 'Jurgen Klopp'),
         ('Real Madrid', ${leagues[1].league_id}, 'Carlo Ancelotti'),
@@ -39,7 +39,7 @@ async function seedData() {
 
     // Insert referees
     const referees = await sql`
-      INSERT INTO referee (first_name, last_name, experience) VALUES
+      INSERT INTO referees (first_name, last_name, experience) VALUES
         ('Michael', 'Oliver', 'FIFA Elite'),
         ('Anthony', 'Taylor', 'FIFA Elite'),
         ('Felix', 'Brych', 'FIFA Elite'),
@@ -50,7 +50,7 @@ async function seedData() {
 
     // Insert players
     const players = await sql`
-      INSERT INTO player (first_name, last_name, age, jersey_number, team_id) VALUES
+      INSERT INTO players (first_name, last_name, age, jersey_number, team_id) VALUES
         ('Marcus', 'Rashford', 25, 10, ${teams[0].team_id}),
         ('Bruno', 'Fernandes', 28, 8, ${teams[0].team_id}),
         ('Mohamed', 'Salah', 30, 11, ${teams[1].team_id}),
@@ -66,7 +66,7 @@ async function seedData() {
 
     // Insert matches
     const matches = await sql`
-      INSERT INTO match (date, location, league_id, home_team_id, away_team_id, referee_id) VALUES
+      INSERT INTO matches (date, location, league_id, home_team_id, away_team_id, referee_id) VALUES
         ('2024-05-01 15:00:00', 'Old Trafford', ${leagues[0].league_id}, ${teams[0].team_id}, ${teams[1].team_id}, ${referees[0].referee_id}),
         ('2024-05-02 20:00:00', 'Santiago Bernabeu', ${leagues[1].league_id}, ${teams[2].team_id}, ${teams[3].team_id}, ${referees[1].referee_id}),
         ('2024-05-03 18:30:00', 'Allianz Arena', ${leagues[2].league_id}, ${teams[4].team_id}, ${teams[5].team_id}, ${referees[2].referee_id}),
@@ -78,8 +78,8 @@ async function seedData() {
     // Insert match_stats
     for (const match of matches) {
       await sql`
-        INSERT INTO match_stats (match_id, home_team_goals, away_team_goals, possession_home, possession_away, shots_on_target_home, shots_on_target_away)
-        VALUES (${match.match_id}, 2, 1, 55, 45, 5, 3)
+        INSERT INTO match_stats (match_id, home_score, away_score, possession_home, possession_away)
+        VALUES (${match.match_id}, 2, 1, 55, 45)
       `;
     }
 

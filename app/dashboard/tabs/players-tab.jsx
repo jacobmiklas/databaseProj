@@ -37,8 +37,8 @@ export default function PlayersTab() {
           p.*,
           t.team_name,
           t.league_id
-        FROM player p
-        JOIN team t ON p.team_id = t.team_id
+        FROM players p
+        JOIN teams t ON p.team_id = t.team_id
         ORDER BY p.last_name, p.first_name
       `;
       setPlayers(result);
@@ -53,7 +53,7 @@ export default function PlayersTab() {
     try {
       const result = await sql`
         SELECT team_id, team_name
-        FROM team
+        FROM teams
         ORDER BY team_name
       `;
       setTeams(result);

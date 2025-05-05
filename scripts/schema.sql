@@ -1,95 +1,102 @@
--- Drop tables if they exist (in reverse order of dependencies)
+-- Drop existing tables and triggers if they exist
+DROP TRIGGER IF EXISTS update_scores_on_player_stats ON player_match_stats;
+DROP TRIGGER IF EXISTS update_records_on_match_stats ON match_stats;
+DROP FUNCTION IF EXISTS update_match_scores();
+DROP FUNCTION IF EXISTS update_team_records();
+
+-- Drop tables in reverse order of dependencies
 DROP TABLE IF EXISTS player_match_stats;
 DROP TABLE IF EXISTS match_stats;
-DROP TABLE IF EXISTS match;
-DROP TABLE IF EXISTS player;
-DROP TABLE IF EXISTS team;
-DROP TABLE IF EXISTS referee;
-DROP TABLE IF EXISTS league;
+DROP TABLE IF EXISTS matches;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS teams;
+DROP TABLE IF EXISTS referees;
+DROP TABLE IF EXISTS leagues;
 DROP TABLE IF EXISTS users;
 
--- Create Users table
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL
-);
-
--- Create League table
-CREATE TABLE league (
+-- Create leagues table
+CREATE TABLE IF NOT EXISTS leagues (
     league_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     city VARCHAR(100) NOT NULL,
     country VARCHAR(100) NOT NULL
 );
 
--- Create Team table
-CREATE TABLE team (
+-- Create teams table
+CREATE TABLE IF NOT EXISTS teams (
     team_id SERIAL PRIMARY KEY,
     team_name VARCHAR(100) NOT NULL,
     coach_name VARCHAR(100) NOT NULL,
     wins INTEGER DEFAULT 0,
     losses INTEGER DEFAULT 0,
     draws INTEGER DEFAULT 0,
-    league_id INTEGER REFERENCES league(league_id)
+    league_id INTEGER REFERENCES leagues(league_id) ON DELETE CASCADE,
+    UNIQUE(team_name, league_id)
 );
 
--- Create Player table
-CREATE TABLE player (
+-- Create players table
+CREATE TABLE IF NOT EXISTS players (
     player_id SERIAL PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
     age INTEGER NOT NULL,
     jersey_number INTEGER NOT NULL,
-    team_id INTEGER REFERENCES team(team_id),
-    UNIQUE(team_id, jersey_number)
+    team_id INTEGER REFERENCES teams(team_id) ON DELETE CASCADE,
+    UNIQUE(jersey_number, team_id)
 );
 
--- Create Referee table
-CREATE TABLE referee (
+-- Create referees table
+CREATE TABLE IF NOT EXISTS referees (
     referee_id SERIAL PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    experience VARCHAR(100)
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    experience VARCHAR(100) NOT NULL
 );
 
--- Create Match table
-CREATE TABLE match (
+-- Create matches table
+CREATE TABLE IF NOT EXISTS matches (
     match_id SERIAL PRIMARY KEY,
     date TIMESTAMP NOT NULL,
     location VARCHAR(100) NOT NULL,
-    league_id INTEGER REFERENCES league(league_id),
-    home_team_id INTEGER REFERENCES team(team_id),
-    away_team_id INTEGER REFERENCES team(team_id),
-    referee_id INTEGER REFERENCES referee(referee_id),
-    CONSTRAINT different_teams CHECK (home_team_id != away_team_id)
+    league_id INTEGER REFERENCES leagues(league_id) ON DELETE CASCADE,
+    home_team_id INTEGER REFERENCES teams(team_id) ON DELETE CASCADE,
+    away_team_id INTEGER REFERENCES teams(team_id) ON DELETE CASCADE,
+    referee_id INTEGER REFERENCES referees(referee_id) ON DELETE SET NULL,
+    CHECK (home_team_id != away_team_id)
 );
 
--- Create MatchStats table
-CREATE TABLE match_stats (
-    match_id INTEGER PRIMARY KEY REFERENCES match(match_id),
-    possession_home FLOAT CHECK (possession_home BETWEEN 0 AND 100),
-    possession_away FLOAT CHECK (possession_away BETWEEN 0 AND 100),
-    fouls_home INTEGER DEFAULT 0,
-    fouls_away INTEGER DEFAULT 0,
-    corners_home INTEGER DEFAULT 0,
-    corners_away INTEGER DEFAULT 0,
-    CONSTRAINT possession_total CHECK (possession_home + possession_away = 100)
+-- Create match_stats table
+CREATE TABLE IF NOT EXISTS match_stats (
+    match_id INTEGER PRIMARY KEY REFERENCES matches(match_id) ON DELETE CASCADE,
+    possession_home INTEGER NOT NULL CHECK (possession_home BETWEEN 0 AND 100),
+    possession_away INTEGER NOT NULL CHECK (possession_away BETWEEN 0 AND 100),
+    fouls_home INTEGER NOT NULL DEFAULT 0,
+    fouls_away INTEGER NOT NULL DEFAULT 0,
+    corners_home INTEGER NOT NULL DEFAULT 0,
+    corners_away INTEGER NOT NULL DEFAULT 0,
+    home_score INTEGER DEFAULT 0,
+    away_score INTEGER DEFAULT 0,
+    CHECK (possession_home + possession_away = 100)
 );
 
--- Create PlayerMatchStats table
-CREATE TABLE player_match_stats (
-    match_id INTEGER REFERENCES match(match_id),
-    player_id INTEGER REFERENCES player(player_id),
-    goals INTEGER DEFAULT 0,
+-- Create player_match_stats table
+CREATE TABLE IF NOT EXISTS player_match_stats (
+    match_id INTEGER REFERENCES matches(match_id) ON DELETE CASCADE,
+    player_id INTEGER REFERENCES players(player_id) ON DELETE CASCADE,
     shots INTEGER DEFAULT 0,
     shots_on_target INTEGER DEFAULT 0,
+    goals INTEGER DEFAULT 0,
     assists INTEGER DEFAULT 0,
     minutes_played INTEGER DEFAULT 0,
     yellow_cards INTEGER DEFAULT 0,
     red_cards INTEGER DEFAULT 0,
-    PRIMARY KEY (match_id, player_id),
-    CONSTRAINT valid_shots CHECK (shots_on_target <= shots),
-    CONSTRAINT valid_minutes CHECK (minutes_played BETWEEN 0 AND 90),
-    CONSTRAINT valid_cards CHECK (red_cards BETWEEN 0 AND 1)
+    PRIMARY KEY (match_id, player_id)
 );
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+

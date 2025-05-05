@@ -30,18 +30,12 @@ export default function TeamsTab() {
   const fetchTeams = async () => {
     try {
       const result = await sql`
-        SELECT 
-          t.*,
-          l.name as league_name
-        FROM team t
-        JOIN league l ON t.league_id = l.league_id
+        SELECT t.*, l.name as league_name
+        FROM teams t
+        LEFT JOIN leagues l ON t.league_id = l.league_id
         ORDER BY t.team_name
       `;
-      const formatted = result.map(team => ({
-        ...team,
-        record: `${team.wins}-${team.losses}-${team.draws}`
-      }));
-      setTeams(formatted);
+      setTeams(result);
     } catch (error) {
       console.error('Error fetching teams:', error);
     } finally {
@@ -53,7 +47,7 @@ export default function TeamsTab() {
     try {
       const result = await sql`
         SELECT league_id, name
-        FROM league
+        FROM leagues
         ORDER BY name
       `;
       setLeagues(result);
