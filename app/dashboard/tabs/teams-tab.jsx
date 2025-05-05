@@ -142,12 +142,14 @@ export default function TeamsTab() {
 
   const columns = [
     { key: 'team_name', header: 'Team Name' },
-    { key: 'league_name', header: 'League' },
     { key: 'coach_name', header: 'Coach' },
+    { key: 'league_name', header: 'League' },
     { 
       key: 'record', 
-      header: 'Record',
-      render: (row) => `${row.wins}-${row.losses}-${row.draws}`
+      header: 'Record (W-L-D)',
+      render: (row) => {
+        return `${row.wins || 0}-${row.losses || 0}-${row.draws || 0}`;
+      }
     }
   ];
 
