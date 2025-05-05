@@ -16,10 +16,7 @@ export default function TeamsTab() {
   const [formData, setFormData] = useState({
     team_name: '',
     league_id: '',
-    coach_name: '',
-    wins: 0,
-    losses: 0,
-    draws: 0
+    coach_name: ''
   });
 
   useEffect(() => {
@@ -30,7 +27,30 @@ export default function TeamsTab() {
   const fetchTeams = async () => {
     try {
       const result = await sql`
-        SELECT t.*, l.name as league_name
+        SELECT 
+          t.*,
+          l.name as league_name,
+          (
+            SELECT COUNT(*) 
+            FROM matches m 
+            JOIN match_stats ms ON m.match_id = ms.match_id
+            WHERE (m.home_team_id = t.team_id AND ms.home_score > ms.away_score)
+               OR (m.away_team_id = t.team_id AND ms.away_score > ms.home_score)
+          ) as wins,
+          (
+            SELECT COUNT(*) 
+            FROM matches m 
+            JOIN match_stats ms ON m.match_id = ms.match_id
+            WHERE (m.home_team_id = t.team_id AND ms.home_score < ms.away_score)
+               OR (m.away_team_id = t.team_id AND ms.away_score < ms.home_score)
+          ) as losses,
+          (
+            SELECT COUNT(*) 
+            FROM matches m 
+            JOIN match_stats ms ON m.match_id = ms.match_id
+            WHERE (m.home_team_id = t.team_id OR m.away_team_id = t.team_id)
+              AND ms.home_score = ms.away_score
+          ) as draws
         FROM teams t
         LEFT JOIN leagues l ON t.league_id = l.league_id
         ORDER BY t.team_name
@@ -61,10 +81,7 @@ export default function TeamsTab() {
     setFormData({
       team_name: '',
       league_id: '',
-      coach_name: '',
-      wins: 0,
-      losses: 0,
-      draws: 0
+      coach_name: ''
     });
     setIsModalOpen(true);
   };
@@ -74,10 +91,7 @@ export default function TeamsTab() {
     setFormData({
       team_name: team.team_name,
       league_id: team.league_id,
-      coach_name: team.coach_name,
-      wins: team.wins,
-      losses: team.losses,
-      draws: team.draws
+      coach_name: team.coach_name
     });
     setIsModalOpen(true);
   };
@@ -101,27 +115,21 @@ export default function TeamsTab() {
     try {
       if (selectedTeam) {
         await sql`
-          UPDATE team
+          UPDATE teams
           SET 
             team_name = ${formData.team_name},
             league_id = ${formData.league_id},
-            coach_name = ${formData.coach_name},
-            wins = ${formData.wins},
-            losses = ${formData.losses},
-            draws = ${formData.draws}
+            coach_name = ${formData.coach_name}
           WHERE team_id = ${selectedTeam.team_id}
         `;
       } else {
         await sql`
-          INSERT INTO team (
-            team_name, league_id, coach_name, wins, losses, draws
+          INSERT INTO teams (
+            team_name, league_id, coach_name
           ) VALUES (
             ${formData.team_name},
             ${formData.league_id},
-            ${formData.coach_name},
-            ${formData.wins},
-            ${formData.losses},
-            ${formData.draws}
+            ${formData.coach_name}
           )
         `;
       }
@@ -136,7 +144,11 @@ export default function TeamsTab() {
     { key: 'team_name', header: 'Team Name' },
     { key: 'league_name', header: 'League' },
     { key: 'coach_name', header: 'Coach' },
-    { key: 'record', header: 'Record' }
+    { 
+      key: 'record', 
+      header: 'Record',
+      render: (row) => `${row.wins}-${row.losses}-${row.draws}`
+    }
   ];
 
   if (isLoading) {
@@ -198,42 +210,6 @@ export default function TeamsTab() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               required
             />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Wins</label>
-              <input
-                type="number"
-                value={formData.wins}
-                onChange={(e) => setFormData({ ...formData, wins: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Losses</label>
-              <input
-                type="number"
-                value={formData.losses}
-                onChange={(e) => setFormData({ ...formData, losses: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Draws</label>
-              <input
-                type="number"
-                value={formData.draws}
-                onChange={(e) => setFormData({ ...formData, draws: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">
