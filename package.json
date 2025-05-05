@@ -8,11 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "setup-db": "ts-node -r dotenv/config scripts/setup-db.ts",
+    "setup-db": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings -r dotenv/config scripts/setup-db.ts",
     "seed": "node -r dotenv/config scripts/seed-data.js",
     "clear": "node -r dotenv/config scripts/reset-data.js"
   },
-
   "dependencies": {
     "@neondatabase/serverless": "^0.7.0",
     "@radix-ui/react-tabs": "^1.0.4",
@@ -36,7 +35,7 @@
     "postcss-preset-env": "^9.3.0",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18.17.0"

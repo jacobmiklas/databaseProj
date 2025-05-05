@@ -27,9 +27,6 @@ CREATE TABLE IF NOT EXISTS teams (
     team_id SERIAL PRIMARY KEY,
     team_name VARCHAR(100) NOT NULL,
     coach_name VARCHAR(100) NOT NULL,
-    wins INTEGER DEFAULT 0,
-    losses INTEGER DEFAULT 0,
-    draws INTEGER DEFAULT 0,
     league_id INTEGER REFERENCES leagues(league_id) ON DELETE CASCADE,
     UNIQUE(team_name, league_id)
 );
