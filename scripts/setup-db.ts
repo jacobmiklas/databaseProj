@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
-import fs from 'fs';
-import path from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 if (!process.env.DATABASE_URL) {
     console.error('Error: DATABASE_URL environment variable is not set');
@@ -12,8 +12,8 @@ const sql = neon(process.env.DATABASE_URL);
 async function setupDatabase() {
     try {
         // Read the schema file
-        const schemaPath = path.join(process.cwd(), 'app/actions/schema.sql');
-        const schema = fs.readFileSync(schemaPath, 'utf8');
+        const schemaPath = join(process.cwd(), 'scripts', 'schema.sql');
+        const schema = readFileSync(schemaPath, 'utf8');
 
         // Split the schema into individual statements and execute them
         const statements = schema
@@ -23,8 +23,7 @@ async function setupDatabase() {
 
         for (const statement of statements) {
             try {
-                // Execute raw SQL using the query method
-                await sql.query(statement);
+                await sql.unsafe(statement);
                 console.log('Executed statement successfully');
             } catch (error) {
                 console.error('Error executing statement:', error);
@@ -33,7 +32,7 @@ async function setupDatabase() {
             }
         }
         
-        console.log('Database schema created successfully!');
+        console.log('Database setup completed successfully!');
 
         // Verify tables were created
         const tables = await sql`
