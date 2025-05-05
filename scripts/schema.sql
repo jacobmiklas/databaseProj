@@ -81,6 +81,7 @@ CREATE TABLE match_stats (
 CREATE TABLE player_match_stats (
     match_id INTEGER REFERENCES match(match_id),
     player_id INTEGER REFERENCES player(player_id),
+    goals INTEGER DEFAULT 0,
     shots INTEGER DEFAULT 0,
     shots_on_target INTEGER DEFAULT 0,
     assists INTEGER DEFAULT 0,
@@ -91,4 +92,4 @@ CREATE TABLE player_match_stats (
     CONSTRAINT valid_shots CHECK (shots_on_target <= shots),
     CONSTRAINT valid_minutes CHECK (minutes_played BETWEEN 0 AND 90),
     CONSTRAINT valid_cards CHECK (red_cards BETWEEN 0 AND 1)
-); 
+);

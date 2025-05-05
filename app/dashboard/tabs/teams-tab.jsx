@@ -37,7 +37,11 @@ export default function TeamsTab() {
         JOIN league l ON t.league_id = l.league_id
         ORDER BY t.team_name
       `;
-      setTeams(result);
+      const formatted = result.map(team => ({
+        ...team,
+        record: `${team.wins}-${team.losses}-${team.draws}`
+      }));
+      setTeams(formatted);
     } catch (error) {
       console.error('Error fetching teams:', error);
     } finally {
@@ -138,11 +142,7 @@ export default function TeamsTab() {
     { key: 'team_name', header: 'Team Name' },
     { key: 'league_name', header: 'League' },
     { key: 'coach_name', header: 'Coach' },
-    { 
-      key: 'record', 
-      header: 'Record',
-      render: (row) => `${row.wins}-${row.losses}-${row.draws}`
-    }
+    { key: 'record', header: 'Record' }
   ];
 
   if (isLoading) {
@@ -261,4 +261,4 @@ export default function TeamsTab() {
       </Modal>
     </>
   );
-} 
+}

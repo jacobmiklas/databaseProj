@@ -9,8 +9,10 @@
     "start": "next start",
     "lint": "next lint",
     "setup-db": "ts-node -r dotenv/config scripts/setup-db.ts",
-    "seed": "node -r dotenv/config scripts/seed-data.js"
+    "seed": "node -r dotenv/config scripts/seed-data.js",
+    "clear": "node -r dotenv/config scripts/reset-data.js"
   },
+
   "dependencies": {
     "@neondatabase/serverless": "^0.7.0",
     "@radix-ui/react-tabs": "^1.0.4",

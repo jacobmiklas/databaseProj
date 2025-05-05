@@ -1,17 +1,16 @@
 import { neon } from '@neondatabase/serverless';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const sql = neon(process.env.DATABASE_URL);
 
 async function seedData() {
   try {
     // Clear existing data
-    await sql`TRUNCATE TABLE match CASCADE`;
-    await sql`TRUNCATE TABLE player CASCADE`;
-    await sql`TRUNCATE TABLE team CASCADE`;
-    await sql`TRUNCATE TABLE referee CASCADE`;
-    await sql`TRUNCATE TABLE league CASCADE`;
+    await sql`TRUNCATE TABLE player_match_stats, match_stats, match, player, team, referee, league CASCADE`;
 
-    // Insert leagues with proper city and country
+    // Insert leagues
     const leagues = await sql`
       INSERT INTO league (name, city, country) VALUES
         ('Premier League', 'London', 'England'),
@@ -22,19 +21,19 @@ async function seedData() {
       RETURNING league_id
     `;
 
-    // Insert teams with proper league assignments
+    // Insert teams
     const teams = await sql`
-      INSERT INTO team (team_name, league_id, coach_name, wins, losses, draws) VALUES
-        ('Manchester United', ${leagues[0].league_id}, 'Erik ten Hag', 20, 5, 3),
-        ('Liverpool', ${leagues[0].league_id}, 'Jurgen Klopp', 18, 7, 3),
-        ('Real Madrid', ${leagues[1].league_id}, 'Carlo Ancelotti', 22, 3, 3),
-        ('Barcelona', ${leagues[1].league_id}, 'Xavi Hernandez', 19, 6, 3),
-        ('Bayern Munich', ${leagues[2].league_id}, 'Thomas Tuchel', 21, 4, 3),
-        ('Dortmund', ${leagues[2].league_id}, 'Edin Terzic', 17, 8, 3),
-        ('AC Milan', ${leagues[3].league_id}, 'Stefano Pioli', 18, 7, 3),
-        ('Inter Milan', ${leagues[3].league_id}, 'Simone Inzaghi', 19, 6, 3),
-        ('PSG', ${leagues[4].league_id}, 'Luis Enrique', 20, 5, 3),
-        ('Lyon', ${leagues[4].league_id}, 'Pierre Sage', 15, 10, 3)
+      INSERT INTO team (team_name, league_id, coach_name) VALUES
+        ('Manchester United', ${leagues[0].league_id}, 'Erik ten Hag'),
+        ('Liverpool', ${leagues[0].league_id}, 'Jurgen Klopp'),
+        ('Real Madrid', ${leagues[1].league_id}, 'Carlo Ancelotti'),
+        ('Barcelona', ${leagues[1].league_id}, 'Xavi Hernandez'),
+        ('Bayern Munich', ${leagues[2].league_id}, 'Thomas Tuchel'),
+        ('Dortmund', ${leagues[2].league_id}, 'Edin Terzic'),
+        ('AC Milan', ${leagues[3].league_id}, 'Stefano Pioli'),
+        ('Inter Milan', ${leagues[3].league_id}, 'Simone Inzaghi'),
+        ('PSG', ${leagues[4].league_id}, 'Luis Enrique'),
+        ('Lyon', ${leagues[4].league_id}, 'Pierre Sage')
       RETURNING team_id
     `;
 
@@ -49,7 +48,7 @@ async function seedData() {
       RETURNING referee_id
     `;
 
-    // Insert players with proper team assignments
+    // Insert players
     const players = await sql`
       INSERT INTO player (first_name, last_name, age, jersey_number, team_id) VALUES
         ('Marcus', 'Rashford', 25, 10, ${teams[0].team_id}),
@@ -62,24 +61,47 @@ async function seedData() {
         ('Joshua', 'Kimmich', 28, 6, ${teams[4].team_id}),
         ('Kylian', 'Mbappe', 24, 7, ${teams[8].team_id}),
         ('Lionel', 'Messi', 35, 30, ${teams[8].team_id})
-      RETURNING player_id
+      RETURNING player_id, team_id
     `;
 
-    // Insert matches with proper team and referee assignments
-    await sql`
+    // Insert matches
+    const matches = await sql`
       INSERT INTO match (date, location, league_id, home_team_id, away_team_id, referee_id) VALUES
         ('2024-05-01 15:00:00', 'Old Trafford', ${leagues[0].league_id}, ${teams[0].team_id}, ${teams[1].team_id}, ${referees[0].referee_id}),
         ('2024-05-02 20:00:00', 'Santiago Bernabeu', ${leagues[1].league_id}, ${teams[2].team_id}, ${teams[3].team_id}, ${referees[1].referee_id}),
         ('2024-05-03 18:30:00', 'Allianz Arena', ${leagues[2].league_id}, ${teams[4].team_id}, ${teams[5].team_id}, ${referees[2].referee_id}),
         ('2024-05-04 20:45:00', 'San Siro', ${leagues[3].league_id}, ${teams[6].team_id}, ${teams[7].team_id}, ${referees[3].referee_id}),
-        ('2024-05-05 21:00:00', 'Parc des Princes', ${leagues[4].league_id}, ${teams[8].team_id}, ${teams[9].team_id}, ${referees[4].referee_id}),
-        ('2024-05-15 15:00:00', 'Anfield', ${leagues[0].league_id}, ${teams[1].team_id}, ${teams[0].team_id}, ${referees[0].referee_id}),
-        ('2024-05-16 20:00:00', 'Camp Nou', ${leagues[1].league_id}, ${teams[3].team_id}, ${teams[2].team_id}, ${referees[1].referee_id}),
-        ('2024-05-17 18:30:00', 'Signal Iduna Park', ${leagues[2].league_id}, ${teams[5].team_id}, ${teams[4].team_id}, ${referees[2].referee_id}),
-        ('2024-05-18 20:45:00', 'San Siro', ${leagues[3].league_id}, ${teams[7].team_id}, ${teams[6].team_id}, ${referees[3].referee_id}),
-        ('2024-05-19 21:00:00', 'Groupama Stadium', ${leagues[4].league_id}, ${teams[9].team_id}, ${teams[8].team_id}, ${referees[4].referee_id})
-      RETURNING match_id
+        ('2024-05-05 21:00:00', 'Parc des Princes', ${leagues[4].league_id}, ${teams[8].team_id}, ${teams[9].team_id}, ${referees[4].referee_id})
+      RETURNING match_id, home_team_id, away_team_id
     `;
+
+    // Insert match_stats
+    for (const match of matches) {
+      await sql`
+        INSERT INTO match_stats (match_id, home_team_goals, away_team_goals, possession_home, possession_away, shots_on_target_home, shots_on_target_away)
+        VALUES (${match.match_id}, 2, 1, 55, 45, 5, 3)
+      `;
+    }
+
+    // Insert player_match_stats
+    for (const match of matches) {
+      const homePlayers = players.filter(p => p.team_id === match.home_team_id);
+      const awayPlayers = players.filter(p => p.team_id === match.away_team_id);
+
+      for (const player of homePlayers) {
+        await sql`
+          INSERT INTO player_match_stats (player_id, match_id, goals, assists, minutes_played)
+          VALUES (${player.player_id}, ${match.match_id}, 1, 0, 90)
+        `;
+      }
+
+      for (const player of awayPlayers) {
+        await sql`
+          INSERT INTO player_match_stats (player_id, match_id, goals, assists, minutes_played)
+          VALUES (${player.player_id}, ${match.match_id}, 0, 1, 90)
+        `;
+      }
+    }
 
     console.log('Database seeded successfully!');
   } catch (error) {
@@ -87,4 +109,4 @@ async function seedData() {
   }
 }
 
-seedData(); 
+seedData();
