@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DataTable } from '../../components/ui/data-table';
 import Modal from '../../components/ui/modal';
-import { getMatches, getTeams, getReferees, createMatch, updateMatch, deleteMatch } from '../../actions/db';
+import { getMatches, getTeams, getReferees, createMatch, updateMatch, deleteMatch, getMatchStats, createMatchStats, updateMatchStats } from '../../actions/db';
 
 export default function MatchesTab() {
   const [matches, setMatches] = useState([]);
@@ -11,15 +11,23 @@ export default function MatchesTab() {
   const [referees, setReferees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [formData, setFormData] = useState({
-    home_team_id: '',
-    away_team_id: '',
     date: '',
     location: '',
-    referee_id: '',
-    home_team_score: 0,
-    away_team_score: 0
+    league_id: '',
+    home_team_id: '',
+    away_team_id: '',
+    referee_id: ''
+  });
+  const [statsFormData, setStatsFormData] = useState({
+    possession_home: 50,
+    possession_away: 50,
+    fouls_home: 0,
+    fouls_away: 0,
+    corners_home: 0,
+    corners_away: 0
   });
 
   useEffect(() => {
@@ -60,13 +68,12 @@ export default function MatchesTab() {
   const handleAdd = () => {
     setSelectedMatch(null);
     setFormData({
-      home_team_id: '',
-      away_team_id: '',
       date: '',
       location: '',
-      referee_id: '',
-      home_team_score: 0,
-      away_team_score: 0
+      league_id: '',
+      home_team_id: '',
+      away_team_id: '',
+      referee_id: ''
     });
     setIsModalOpen(true);
   };
@@ -74,13 +81,12 @@ export default function MatchesTab() {
   const handleEdit = (match) => {
     setSelectedMatch(match);
     setFormData({
+      date: new Date(match.date).toISOString().slice(0, 16),
+      location: match.location,
+      league_id: match.league_id,
       home_team_id: match.home_team_id,
       away_team_id: match.away_team_id,
-      date: match.date,
-      location: match.location,
-      referee_id: match.referee_id,
-      home_team_score: match.home_team_score || 0,
-      away_team_score: match.away_team_score || 0
+      referee_id: match.referee_id
     });
     setIsModalOpen(true);
   };
@@ -111,14 +117,71 @@ export default function MatchesTab() {
     }
   };
 
+  const handleViewStats = async (match) => {
+    setSelectedMatch(match);
+    try {
+      const stats = await getMatchStats(match.match_id);
+      if (stats && stats.length > 0) {
+        setStatsFormData(stats[0]);
+      } else {
+        setStatsFormData({
+          possession_home: 50,
+          possession_away: 50,
+          fouls_home: 0,
+          fouls_away: 0,
+          corners_home: 0,
+          corners_away: 0
+        });
+      }
+      setIsStatsModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching match stats:', error);
+    }
+  };
+
+  const handleStatsSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (selectedMatch) {
+        const stats = await getMatchStats(selectedMatch.match_id);
+        if (stats && stats.length > 0) {
+          await updateMatchStats(selectedMatch.match_id, statsFormData);
+        } else {
+          await createMatchStats({
+            match_id: selectedMatch.match_id,
+            ...statsFormData
+          });
+        }
+        setIsStatsModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error saving match stats:', error);
+    }
+  };
+
   const columns = [
-    { key: 'date', header: 'Date' },
+    { 
+      key: 'date', 
+      header: 'Date',
+      render: (row) => {
+        const date = new Date(row.date);
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    },
     { key: 'location', header: 'Location' },
     { key: 'home_team_name', header: 'Home Team' },
     { key: 'away_team_name', header: 'Away Team' },
-    { key: 'referee_name', header: 'Referee' },
-    { key: 'home_team_score', header: 'Home Score' },
-    { key: 'away_team_score', header: 'Away Score' }
+    { 
+      key: 'referee', 
+      header: 'Referee',
+      render: (row) => `${row.referee_first_name} ${row.referee_last_name}`
+    }
   ];
 
   if (isLoading) {
@@ -133,6 +196,7 @@ export default function MatchesTab() {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onViewStats={handleViewStats}
         title="Matches"
         searchPlaceholder="Search matches..."
       />
@@ -143,6 +207,28 @@ export default function MatchesTab() {
         title={selectedMatch ? 'Edit Match' : 'Add Match'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Date</label>
+            <input
+              type="datetime-local"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Location</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700">Home Team</label>
             <select
@@ -178,28 +264,6 @@ export default function MatchesTab() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Date</label>
-            <input
-              type="datetime-local"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Location</label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700">Referee</label>
             <select
               value={formData.referee_id}
@@ -210,32 +274,10 @@ export default function MatchesTab() {
               <option value="">Select Referee</option>
               {referees.map((referee) => (
                 <option key={referee.referee_id} value={referee.referee_id}>
-                  {referee.referee_name}
+                  {referee.first_name} {referee.last_name}
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Home Team Score</label>
-            <input
-              type="number"
-              value={formData.home_team_score}
-              onChange={(e) => setFormData({ ...formData, home_team_score: parseInt(e.target.value) })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              min="0"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Away Team Score</label>
-            <input
-              type="number"
-              value={formData.away_team_score}
-              onChange={(e) => setFormData({ ...formData, away_team_score: parseInt(e.target.value) })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              min="0"
-            />
           </div>
 
           <div className="flex justify-end space-x-3">
@@ -251,6 +293,106 @@ export default function MatchesTab() {
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700"
             >
               {selectedMatch ? 'Update' : 'Add'} Match
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
+        title="Match Statistics"
+      >
+        <form onSubmit={handleStatsSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Home Team Possession (%)</label>
+              <input
+                type="number"
+                value={statsFormData.possession_home}
+                onChange={(e) => setStatsFormData({ ...statsFormData, possession_home: parseInt(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                min="0"
+                max="100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Away Team Possession (%)</label>
+              <input
+                type="number"
+                value={statsFormData.possession_away}
+                onChange={(e) => setStatsFormData({ ...statsFormData, possession_away: parseInt(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                min="0"
+                max="100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Home Team Fouls</label>
+              <input
+                type="number"
+                value={statsFormData.fouls_home}
+                onChange={(e) => setStatsFormData({ ...statsFormData, fouls_home: parseInt(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                min="0"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Away Team Fouls</label>
+              <input
+                type="number"
+                value={statsFormData.fouls_away}
+                onChange={(e) => setStatsFormData({ ...statsFormData, fouls_away: parseInt(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                min="0"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Home Team Corners</label>
+              <input
+                type="number"
+                value={statsFormData.corners_home}
+                onChange={(e) => setStatsFormData({ ...statsFormData, corners_home: parseInt(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                min="0"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Away Team Corners</label>
+              <input
+                type="number"
+                value={statsFormData.corners_away}
+                onChange={(e) => setStatsFormData({ ...statsFormData, corners_away: parseInt(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                min="0"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setIsStatsModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700"
+            >
+              Save Statistics
             </button>
           </div>
         </form>

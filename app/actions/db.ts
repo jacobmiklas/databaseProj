@@ -142,9 +142,9 @@ export async function deletePlayer(playerId: number) {
 export async function createMatch(match: Omit<Match, 'match_id'>) {
     const sql = getDbConnection();
     const result = await sql`
-        INSERT INTO match (date, location, home_team_id, away_team_id, league_id, referee_id)
-        VALUES (${match.date}, ${match.location}, ${match.home_team_id}, 
-                ${match.away_team_id}, ${match.league_id}, ${match.referee_id})
+        INSERT INTO match (date, location, league_id, home_team_id, away_team_id, referee_id)
+        VALUES (${match.date}, ${match.location}, ${match.league_id}, 
+                ${match.home_team_id}, ${match.away_team_id}, ${match.referee_id})
         RETURNING *
     `;
     return result[0];
@@ -158,7 +158,9 @@ export async function getMatches() {
                 m.*,
                 ht.team_name as home_team_name,
                 at.team_name as away_team_name,
-                r.referee_name
+                r.first_name as referee_first_name,
+                r.last_name as referee_last_name,
+                r.experience as referee_experience
             FROM match m
             LEFT JOIN team ht ON m.home_team_id = ht.team_id
             LEFT JOIN team at ON m.away_team_id = at.team_id
@@ -191,9 +193,12 @@ export async function updateMatch(matchId: number, match: Partial<Match>) {
     const sql = getDbConnection();
     const result = await sql`
         UPDATE match
-        SET date = ${match.date}, location = ${match.location},
-            home_team_id = ${match.home_team_id}, away_team_id = ${match.away_team_id},
-            league_id = ${match.league_id}, referee_id = ${match.referee_id}
+        SET date = ${match.date}, 
+            location = ${match.location},
+            league_id = ${match.league_id},
+            home_team_id = ${match.home_team_id}, 
+            away_team_id = ${match.away_team_id},
+            referee_id = ${match.referee_id}
         WHERE match_id = ${matchId}
         RETURNING *
     `;
@@ -209,45 +214,91 @@ export async function deleteMatch(matchId: number) {
 export async function createMatchStats(stats: MatchStats) {
     const sql = getDbConnection();
     const result = await sql`
-        INSERT INTO match_stats (match_id, home_team_score, away_team_score)
-        VALUES (${stats.match_id}, ${stats.home_team_score}, ${stats.away_team_score})
+        INSERT INTO match_stats (
+            match_id, possession_home, possession_away,
+            fouls_home, fouls_away, corners_home, corners_away
+        )
+        VALUES (
+            ${stats.match_id}, ${stats.possession_home}, ${stats.possession_away},
+            ${stats.fouls_home}, ${stats.fouls_away}, ${stats.corners_home}, ${stats.corners_away}
+        )
         RETURNING *
     `;
     return result[0];
 }
 
+export async function getMatchStats(matchId: number) {
+    const sql = getDbConnection();
+    return await sql`
+        SELECT * FROM match_stats WHERE match_id = ${matchId}
+    `;
+}
+
+export async function updateMatchStats(matchId: number, stats: Partial<MatchStats>) {
+    const sql = getDbConnection();
+    const result = await sql`
+        UPDATE match_stats
+        SET possession_home = ${stats.possession_home},
+            possession_away = ${stats.possession_away},
+            fouls_home = ${stats.fouls_home},
+            fouls_away = ${stats.fouls_away},
+            corners_home = ${stats.corners_home},
+            corners_away = ${stats.corners_away}
+        WHERE match_id = ${matchId}
+        RETURNING *
+    `;
+    return result[0];
+}
+
+// Player Match Stats operations
 export async function createPlayerMatchStats(stats: PlayerMatchStats) {
     const sql = getDbConnection();
     const result = await sql`
-        INSERT INTO player_match_stats (player_id, match_id, goals_scored, assists, yellow_cards, red_cards)
-        VALUES (${stats.player_id}, ${stats.match_id}, ${stats.goals_scored}, 
-                ${stats.assists}, ${stats.yellow_cards}, ${stats.red_cards})
+        INSERT INTO player_match_stats (
+            match_id, player_id, shots, shots_on_target,
+            assists, minutes_played, yellow_cards, red_cards
+        )
+        VALUES (
+            ${stats.match_id}, ${stats.player_id}, ${stats.shots}, ${stats.shots_on_target},
+            ${stats.assists}, ${stats.minutes_played}, ${stats.yellow_cards}, ${stats.red_cards}
+        )
         RETURNING *
     `;
     return result[0];
 }
 
-export async function getPlayerStats(playerId: number) {
+export async function getPlayerMatchStats(matchId: number, playerId: number) {
     const sql = getDbConnection();
     return await sql`
-        SELECT pms.*, m.date, m.location,
-               ht.team_name as home_team_name,
-               at.team_name as away_team_name
+        SELECT pms.*, p.first_name, p.last_name, p.jersey_number
         FROM player_match_stats pms
-        JOIN match m ON pms.match_id = m.match_id
-        JOIN team ht ON m.home_team_id = ht.team_id
-        JOIN team at ON m.away_team_id = at.team_id
-        WHERE pms.player_id = ${playerId}
-        ORDER BY m.date DESC
+        JOIN player p ON pms.player_id = p.player_id
+        WHERE pms.match_id = ${matchId} AND pms.player_id = ${playerId}
     `;
+}
+
+export async function updatePlayerMatchStats(matchId: number, playerId: number, stats: Partial<PlayerMatchStats>) {
+    const sql = getDbConnection();
+    const result = await sql`
+        UPDATE player_match_stats
+        SET shots = ${stats.shots},
+            shots_on_target = ${stats.shots_on_target},
+            assists = ${stats.assists},
+            minutes_played = ${stats.minutes_played},
+            yellow_cards = ${stats.yellow_cards},
+            red_cards = ${stats.red_cards}
+        WHERE match_id = ${matchId} AND player_id = ${playerId}
+        RETURNING *
+    `;
+    return result[0];
 }
 
 // Referee operations
 export async function createReferee(referee: Omit<Referee, 'referee_id'>) {
     const sql = getDbConnection();
     const result = await sql`
-        INSERT INTO referee (referee_name, experience_years)
-        VALUES (${referee.referee_name}, ${referee.experience_years})
+        INSERT INTO referee (first_name, last_name, experience)
+        VALUES (${referee.first_name}, ${referee.last_name}, ${referee.experience})
         RETURNING *
     `;
     return result[0];
@@ -256,7 +307,7 @@ export async function createReferee(referee: Omit<Referee, 'referee_id'>) {
 export async function getReferees() {
     try {
         const sql = getDbConnection();
-        return await sql`SELECT * FROM referee ORDER BY referee_name`;
+        return await sql`SELECT * FROM referee ORDER BY last_name, first_name`;
     } catch (error) {
         console.error('Error in getReferees:', error);
         throw error;
@@ -267,7 +318,9 @@ export async function updateReferee(refereeId: number, referee: Partial<Referee>
     const sql = getDbConnection();
     const result = await sql`
         UPDATE referee
-        SET referee_name = ${referee.referee_name}, experience_years = ${referee.experience_years}
+        SET first_name = ${referee.first_name}, 
+            last_name = ${referee.last_name}, 
+            experience = ${referee.experience}
         WHERE referee_id = ${refereeId}
         RETURNING *
     `;

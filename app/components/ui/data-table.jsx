@@ -8,6 +8,7 @@ export function DataTable({
   onEdit,
   onDelete,
   onAdd,
+  onViewStats,
   title,
   searchPlaceholder = "Search...",
   filterComponent
@@ -19,6 +20,13 @@ export function DataTable({
       String(value).toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
+
+  const renderCell = (row, column) => {
+    if (column.render) {
+      return column.render(row);
+    }
+    return row[column.key];
+  };
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -59,7 +67,7 @@ export function DataTable({
                   {column.header}
                 </th>
               ))}
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || onViewStats) && (
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -71,11 +79,19 @@ export function DataTable({
               <tr key={rowIndex}>
                 {columns.map((column) => (
                   <td key={column.key} className="px-6 py-4 whitespace-nowrap">
-                    {row[column.key]}
+                    {renderCell(row, column)}
                   </td>
                 ))}
-                {(onEdit || onDelete) && (
+                {(onEdit || onDelete || onViewStats) && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {onViewStats && (
+                      <button
+                        onClick={() => onViewStats(row)}
+                        className="text-green-600 hover:text-green-900 mr-4"
+                      >
+                        Stats
+                      </button>
+                    )}
                     {onEdit && (
                       <button
                         onClick={() => onEdit(row)}
