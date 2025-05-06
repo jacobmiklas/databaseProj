@@ -86,21 +86,53 @@ export async function createPlayer(player: Omit<Player, 'player_id'>) {
 
 export async function getPlayers() {
     return await sql<Player[]>`
-        SELECT * FROM players
-        ORDER BY last_name, first_name
+        SELECT 
+            p.*,
+            t.team_name,
+            t.league_id,
+            ps.goals_scored,
+            ps.assists,
+            ps.yellow_cards,
+            ps.red_cards,
+            (
+                SELECT COUNT(*) 
+                FROM matches m 
+                WHERE m.home_team_id = p.team_id OR m.away_team_id = p.team_id
+            ) as games_played
+        FROM players p
+        JOIN teams t ON p.team_id = t.team_id
+        LEFT JOIN player_stats ps ON p.player_id = ps.player_id
+        ORDER BY p.last_name, p.first_name
     `;
 }
 
 export async function updatePlayer(player: Player) {
-    await sql`
-        UPDATE players
-        SET first_name = ${player.first_name},
-            last_name = ${player.last_name},
-            age = ${player.age},
-            jersey_number = ${player.jersey_number},
-            team_id = ${player.team_id}
-        WHERE player_id = ${player.player_id}
-    `;
+    try {
+        // First check if the jersey number is already taken by another player on the same team
+        const existingPlayer = await sql`
+            SELECT player_id FROM players 
+            WHERE team_id = ${player.team_id} 
+            AND jersey_number = ${player.jersey_number}
+            AND player_id != ${player.player_id}
+        `;
+        
+        if (existingPlayer.length > 0) {
+            throw new Error('Jersey number is already taken by another player on this team');
+        }
+
+        await sql`
+            UPDATE players
+            SET first_name = ${player.first_name},
+                last_name = ${player.last_name},
+                age = ${player.age},
+                jersey_number = ${player.jersey_number},
+                team_id = ${player.team_id}
+            WHERE player_id = ${player.player_id}
+        `;
+    } catch (error) {
+        console.error('Error updating player:', error);
+        throw error;
+    }
 }
 
 export async function deletePlayer(playerId: number) {
@@ -274,4 +306,41 @@ export async function getMatchPlayerStats(matchId: number) {
         WHERE pms.match_id = ${matchId}
         ORDER BY t.team_name, p.last_name, p.first_name
     `;
+}
+
+export async function getPlayerStats(playerId: number) {
+  try {
+    const result = await sql`
+      SELECT * FROM player_stats
+      WHERE player_id = ${playerId}
+    `;
+    return result[0] || null;
+  } catch (error) {
+    console.error('Error getting player stats:', error);
+    throw error;
+  }
+}
+
+export async function updatePlayerStats(playerId: number, stats: {
+  goals_scored?: number;
+  assists?: number;
+  yellow_cards?: number;
+  red_cards?: number;
+}) {
+  try {
+    const result = await sql`
+      INSERT INTO player_stats (player_id, goals_scored, assists, yellow_cards, red_cards)
+      VALUES (${playerId}, ${stats.goals_scored || 0}, ${stats.assists || 0}, ${stats.yellow_cards || 0}, ${stats.red_cards || 0})
+      ON CONFLICT (player_id) DO UPDATE SET
+        goals_scored = EXCLUDED.goals_scored,
+        assists = EXCLUDED.assists,
+        yellow_cards = EXCLUDED.yellow_cards,
+        red_cards = EXCLUDED.red_cards
+      RETURNING *
+    `;
+    return result[0];
+  } catch (error) {
+    console.error('Error updating player stats:', error);
+    throw error;
+  }
 }

@@ -75,43 +75,49 @@ export function DataTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredData.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4 whitespace-nowrap">
-                    {renderCell(row, column)}
-                  </td>
-                ))}
-                {(onEdit || onDelete || onViewStats) && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {onViewStats && (
-                      <button
-                        onClick={() => onViewStats(row)}
-                        className="text-green-600 hover:text-green-900 mr-4"
-                      >
-                        Stats
-                      </button>
-                    )}
-                    {onEdit && (
-                      <button
-                        onClick={() => onEdit(row)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(row)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
+            {filteredData.map((row) => {
+              const rowId = row.player_id || row.team_id || row.league_id || row.match_id || row.referee_id || Math.random().toString(36).substring(7);
+              return (
+                <tr key={rowId}>
+                  {columns.map((column, index) => {
+                    const cellKey = column.key || `col-${index}`;
+                    return (
+                      <td key={`${rowId}-${cellKey}`} className="px-6 py-4 whitespace-nowrap">
+                        {column.render ? column.render(row) : row[column.key]}
+                      </td>
+                    );
+                  })}
+                  {(onEdit || onDelete || onViewStats) && (
+                    <td key={`${rowId}-actions`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {onViewStats && (
+                        <button
+                          onClick={() => onViewStats(row)}
+                          className="text-green-600 hover:text-green-900 mr-4"
+                        >
+                          Stats
+                        </button>
+                      )}
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(row)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(row)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

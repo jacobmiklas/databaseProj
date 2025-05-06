@@ -1,11 +1,9 @@
 -- Drop existing tables and triggers if they exist
-DROP TRIGGER IF EXISTS update_scores_on_player_stats ON player_match_stats;
 DROP TRIGGER IF EXISTS update_records_on_match_stats ON match_stats;
-DROP FUNCTION IF EXISTS update_match_scores();
 DROP FUNCTION IF EXISTS update_team_records();
 
 -- Drop tables in reverse order of dependencies
-DROP TABLE IF EXISTS player_match_stats;
+DROP TABLE IF EXISTS player_stats;
 DROP TABLE IF EXISTS match_stats;
 DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS players;
@@ -76,18 +74,13 @@ CREATE TABLE IF NOT EXISTS match_stats (
     CHECK (possession_home + possession_away = 100)
 );
 
--- Create player_match_stats table
-CREATE TABLE IF NOT EXISTS player_match_stats (
-    match_id INTEGER REFERENCES matches(match_id) ON DELETE CASCADE,
-    player_id INTEGER REFERENCES players(player_id) ON DELETE CASCADE,
-    shots INTEGER DEFAULT 0,
-    shots_on_target INTEGER DEFAULT 0,
-    goals INTEGER DEFAULT 0,
+-- Create player_stats table
+CREATE TABLE IF NOT EXISTS player_stats (
+    player_id INTEGER PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE,
+    goals_scored INTEGER DEFAULT 0,
     assists INTEGER DEFAULT 0,
-    minutes_played INTEGER DEFAULT 0,
     yellow_cards INTEGER DEFAULT 0,
-    red_cards INTEGER DEFAULT 0,
-    PRIMARY KEY (match_id, player_id)
+    red_cards INTEGER DEFAULT 0
 );
 
 -- Create users table

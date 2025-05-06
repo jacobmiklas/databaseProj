@@ -22,6 +22,13 @@ export interface Player {
     age: number;
     jersey_number: number;
     team_id: number;
+    team_name?: string;
+    league_id?: number;
+    goals_scored?: number;
+    assists?: number;
+    yellow_cards?: number;
+    red_cards?: number;
+    games_played?: number;
 }
 
 export interface Referee {

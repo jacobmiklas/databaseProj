@@ -8,7 +8,7 @@ const sql = neon(process.env.DATABASE_URL);
 async function seedData() {
   try {
     // Clear existing data
-    await sql`TRUNCATE TABLE player_match_stats, match_stats, matches, players, teams, referees, leagues CASCADE`;
+    await sql`TRUNCATE TABLE match_stats, matches, players, teams, referees, leagues CASCADE`;
 
     // Insert leagues
     const leagues = await sql`
@@ -61,7 +61,7 @@ async function seedData() {
         ('Joshua', 'Kimmich', 28, 6, ${teams[4].team_id}),
         ('Kylian', 'Mbappe', 24, 7, ${teams[8].team_id}),
         ('Lionel', 'Messi', 35, 30, ${teams[8].team_id})
-      RETURNING player_id, team_id
+      RETURNING player_id
     `;
 
     // Insert matches
@@ -72,35 +72,23 @@ async function seedData() {
         ('2024-05-03 18:30:00', 'Allianz Arena', ${leagues[2].league_id}, ${teams[4].team_id}, ${teams[5].team_id}, ${referees[2].referee_id}),
         ('2024-05-04 20:45:00', 'San Siro', ${leagues[3].league_id}, ${teams[6].team_id}, ${teams[7].team_id}, ${referees[3].referee_id}),
         ('2024-05-05 21:00:00', 'Parc des Princes', ${leagues[4].league_id}, ${teams[8].team_id}, ${teams[9].team_id}, ${referees[4].referee_id})
-      RETURNING match_id, home_team_id, away_team_id
+      RETURNING match_id
     `;
 
     // Insert match_stats
     for (const match of matches) {
       await sql`
-        INSERT INTO match_stats (match_id, home_score, away_score, possession_home, possession_away)
-        VALUES (${match.match_id}, 2, 1, 55, 45)
+        INSERT INTO match_stats (match_id, home_score, away_score, possession_home, possession_away, fouls_home, fouls_away, corners_home, corners_away)
+        VALUES (${match.match_id}, 2, 1, 55, 45, 12, 15, 8, 4)
       `;
     }
 
-    // Insert player_match_stats
-    for (const match of matches) {
-      const homePlayers = players.filter(p => p.team_id === match.home_team_id);
-      const awayPlayers = players.filter(p => p.team_id === match.away_team_id);
-
-      for (const player of homePlayers) {
-        await sql`
-          INSERT INTO player_match_stats (player_id, match_id, goals, assists, minutes_played)
-          VALUES (${player.player_id}, ${match.match_id}, 1, 0, 90)
-        `;
-      }
-
-      for (const player of awayPlayers) {
-        await sql`
-          INSERT INTO player_match_stats (player_id, match_id, goals, assists, minutes_played)
-          VALUES (${player.player_id}, ${match.match_id}, 0, 1, 90)
-        `;
-      }
+    // Insert player_stats
+    for (const player of players) {
+      await sql`
+        INSERT INTO player_stats (player_id, goals_scored, assists, yellow_cards, red_cards)
+        VALUES (${player.player_id}, 5, 3, 1, 0)
+      `;
     }
 
     console.log('Database seeded successfully!');

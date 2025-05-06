@@ -3,22 +3,23 @@
 import { useState, useEffect } from 'react';
 import { DataTable } from '../../components/ui/data-table';
 import Modal from '../../components/ui/modal';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL);
+import { getPlayers, getTeams, createPlayer, updatePlayer, deletePlayer, getPlayerStats, updatePlayerStats } from '../../actions/db';
 
 export default function PlayersTab() {
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    team_id: '',
-    position: '',
+    age: '',
     jersey_number: '',
+    team_id: ''
+  });
+  const [statsFormData, setStatsFormData] = useState({
     goals_scored: 0,
     assists: 0,
     yellow_cards: 0,
@@ -32,15 +33,8 @@ export default function PlayersTab() {
 
   const fetchPlayers = async () => {
     try {
-      const result = await sql`
-        SELECT 
-          p.*,
-          t.team_name,
-          t.league_id
-        FROM players p
-        JOIN teams t ON p.team_id = t.team_id
-        ORDER BY p.last_name, p.first_name
-      `;
+      const result = await getPlayers();
+      console.log('Fetched players:', result); // Add debug log
       setPlayers(result);
     } catch (error) {
       console.error('Error fetching players:', error);
@@ -51,11 +45,7 @@ export default function PlayersTab() {
 
   const fetchTeams = async () => {
     try {
-      const result = await sql`
-        SELECT team_id, team_name
-        FROM teams
-        ORDER BY team_name
-      `;
+      const result = await getTeams();
       setTeams(result);
     } catch (error) {
       console.error('Error fetching teams:', error);
@@ -67,13 +57,9 @@ export default function PlayersTab() {
     setFormData({
       first_name: '',
       last_name: '',
-      team_id: '',
-      position: '',
+      age: '',
       jersey_number: '',
-      goals_scored: 0,
-      assists: 0,
-      yellow_cards: 0,
-      red_cards: 0
+      team_id: ''
     });
     setIsModalOpen(true);
   };
@@ -83,13 +69,9 @@ export default function PlayersTab() {
     setFormData({
       first_name: player.first_name,
       last_name: player.last_name,
-      team_id: player.team_id,
-      position: player.position,
+      age: player.age,
       jersey_number: player.jersey_number,
-      goals_scored: player.goals_scored,
-      assists: player.assists,
-      yellow_cards: player.yellow_cards,
-      red_cards: player.red_cards
+      team_id: player.team_id
     });
     setIsModalOpen(true);
   };
@@ -97,10 +79,7 @@ export default function PlayersTab() {
   const handleDelete = async (player) => {
     if (window.confirm(`Are you sure you want to delete ${player.first_name} ${player.last_name}?`)) {
       try {
-        await sql`
-          DELETE FROM player
-          WHERE player_id = ${player.player_id}
-        `;
+        await deletePlayer(player.player_id);
         fetchPlayers();
       } catch (error) {
         console.error('Error deleting player:', error);
@@ -111,75 +90,125 @@ export default function PlayersTab() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const playerData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        age: parseInt(formData.age),
+        jersey_number: parseInt(formData.jersey_number),
+        team_id: parseInt(formData.team_id)
+      };
+
       if (selectedPlayer) {
-        await sql`
-          UPDATE player
-          SET 
-            first_name = ${formData.first_name},
-            last_name = ${formData.last_name},
-            team_id = ${formData.team_id},
-            position = ${formData.position},
-            jersey_number = ${formData.jersey_number},
-            goals_scored = ${formData.goals_scored},
-            assists = ${formData.assists},
-            yellow_cards = ${formData.yellow_cards},
-            red_cards = ${formData.red_cards}
-          WHERE player_id = ${selectedPlayer.player_id}
-        `;
+        try {
+          await updatePlayer({
+            player_id: selectedPlayer.player_id,
+            ...playerData
+          });
+        } catch (error) {
+          if (error.message.includes('Jersey number is already taken')) {
+            alert('Error: This jersey number is already taken by another player on this team');
+            return;
+          }
+          throw error;
+        }
       } else {
-        await sql`
-          INSERT INTO player (
-            first_name, last_name, team_id, position, jersey_number,
-            goals_scored, assists, yellow_cards, red_cards
-          ) VALUES (
-            ${formData.first_name},
-            ${formData.last_name},
-            ${formData.team_id},
-            ${formData.position},
-            ${formData.jersey_number},
-            ${formData.goals_scored},
-            ${formData.assists},
-            ${formData.yellow_cards},
-            ${formData.red_cards}
-          )
-        `;
+        await createPlayer(playerData);
       }
       setIsModalOpen(false);
-      fetchPlayers();
+      setFormData({
+        first_name: '',
+        last_name: '',
+        age: '',
+        jersey_number: '',
+        team_id: ''
+      });
+      await fetchPlayers();
     } catch (error) {
       console.error('Error saving player:', error);
+      alert('Error saving player: ' + error.message);
+    }
+  };
+
+  const handleViewStats = async (player) => {
+    if (!player || !player.player_id) {
+      console.error('Invalid player data');
+      return;
+    }
+    setSelectedPlayer(player);
+    try {
+      const stats = await getPlayerStats(player.player_id);
+      if (stats) {
+        setStatsFormData({
+          goals_scored: stats.goals_scored || 0,
+          assists: stats.assists || 0,
+          yellow_cards: stats.yellow_cards || 0,
+          red_cards: stats.red_cards || 0
+        });
+      } else {
+        setStatsFormData({
+          goals_scored: 0,
+          assists: 0,
+          yellow_cards: 0,
+          red_cards: 0
+        });
+      }
+      setIsStatsModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+    }
+  };
+
+  const handleStatsSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const statsData = {
+        goals_scored: parseInt(statsFormData.goals_scored) || 0,
+        assists: parseInt(statsFormData.assists) || 0,
+        yellow_cards: parseInt(statsFormData.yellow_cards) || 0,
+        red_cards: parseInt(statsFormData.red_cards) || 0
+      };
+
+      await updatePlayerStats(selectedPlayer.player_id, statsData);
+      setIsStatsModalOpen(false);
+      setStatsFormData({
+        goals_scored: 0,
+        assists: 0,
+        yellow_cards: 0,
+        red_cards: 0
+      });
+      setSelectedPlayer(null);
+      await fetchPlayers();
+    } catch (error) {
+      console.error('Error updating player stats:', error);
     }
   };
 
   const columns = [
     { 
-      key: 'name', 
       header: 'Name',
+      key: 'name',
       render: (row) => `${row.first_name} ${row.last_name}`
     },
-    { key: 'team_name', header: 'Team' },
-    { key: 'position', header: 'Position' },
-    { key: 'jersey_number', header: 'Jersey #' },
-    { key: 'goals_scored', header: 'Goals' },
-    { key: 'assists', header: 'Assists' },
-    { key: 'yellow_cards', header: 'Yellow Cards' },
-    { key: 'red_cards', header: 'Red Cards' }
+    { header: 'Age', key: 'age' },
+    { header: 'Jersey Number', key: 'jersey_number' },
+    { header: 'Team', key: 'team_name' },
+    { header: 'Goals', key: 'goals_scored' },
+    { header: 'Assists', key: 'assists' },
+    { header: 'Yellow Cards', key: 'yellow_cards' },
+    { header: 'Red Cards', key: 'red_cards' }
   ];
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <>
+    <div className="space-y-4">
       <DataTable
         columns={columns}
         data={players}
-        onAdd={handleAdd}
+        isLoading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onViewStats={handleViewStats}
+        onAdd={handleAdd}
         title="Players"
-        searchPlaceholder="Search players..."
       />
 
       <Modal
@@ -188,29 +217,46 @@ export default function PlayersTab() {
         title={selectedPlayer ? 'Edit Player' : 'Add Player'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">First Name</label>
-              <input
-                type="text"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Last Name</label>
-              <input
-                type="text"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">First Name</label>
+            <input
+              type="text"
+              value={formData.first_name}
+              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
           </div>
-
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Last Name</label>
+            <input
+              type="text"
+              value={formData.last_name}
+              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Age</label>
+            <input
+              type="number"
+              value={formData.age}
+              onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Jersey Number</label>
+            <input
+              type="number"
+              value={formData.jersey_number}
+              onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Team</label>
             <select
@@ -227,95 +273,87 @@ export default function PlayersTab() {
               ))}
             </select>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Position</label>
-              <input
-                type="text"
-                value={formData.position}
-                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Jersey Number</label>
-              <input
-                type="number"
-                value={formData.jersey_number}
-                onChange={(e) => setFormData({ ...formData, jersey_number: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="1"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Goals</label>
-              <input
-                type="number"
-                value={formData.goals_scored}
-                onChange={(e) => setFormData({ ...formData, goals_scored: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Assists</label>
-              <input
-                type="number"
-                value={formData.assists}
-                onChange={(e) => setFormData({ ...formData, assists: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Yellow Cards</label>
-              <input
-                type="number"
-                value={formData.yellow_cards}
-                onChange={(e) => setFormData({ ...formData, yellow_cards: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Red Cards</label>
-              <input
-                type="number"
-                value={formData.red_cards}
-                onChange={(e) => setFormData({ ...formData, red_cards: parseInt(e.target.value) })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                min="0"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 mt-6">
+          <div className="flex justify-end space-x-2">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              {selectedPlayer ? 'Update' : 'Add'} Player
+              {selectedPlayer ? 'Update' : 'Add'}
             </button>
           </div>
         </form>
       </Modal>
-    </>
+
+      <Modal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
+        title={`${selectedPlayer?.first_name} ${selectedPlayer?.last_name} - Stats`}
+      >
+        <form onSubmit={handleStatsSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Goals Scored</label>
+            <input
+              type="number"
+              value={statsFormData.goals_scored}
+              onChange={(e) => setStatsFormData({ ...statsFormData, goals_scored: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Assists</label>
+            <input
+              type="number"
+              value={statsFormData.assists}
+              onChange={(e) => setStatsFormData({ ...statsFormData, assists: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Yellow Cards</label>
+            <input
+              type="number"
+              value={statsFormData.yellow_cards}
+              onChange={(e) => setStatsFormData({ ...statsFormData, yellow_cards: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Red Cards</label>
+            <input
+              type="number"
+              value={statsFormData.red_cards}
+              onChange={(e) => setStatsFormData({ ...statsFormData, red_cards: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsStatsModalOpen(false)}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Update Stats
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
   );
 } 
