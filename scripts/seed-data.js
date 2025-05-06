@@ -40,11 +40,11 @@ async function seedData() {
     // Insert referees
     const referees = await sql`
       INSERT INTO referees (first_name, last_name, experience) VALUES
-        ('Michael', 'Oliver', 'FIFA Elite'),
-        ('Anthony', 'Taylor', 'FIFA Elite'),
-        ('Felix', 'Brych', 'FIFA Elite'),
-        ('Daniele', 'Orsato', 'FIFA Elite'),
-        ('Clement', 'Turpin', 'FIFA Elite')
+        ('Michael', 'Oliver', 'FIFA'),
+        ('Anthony', 'Taylor', 'FIFA'),
+        ('Felix', 'Brych', 'FIFA'),
+        ('Daniele', 'Orsato', 'FIFA'),
+        ('Clement', 'Turpin', 'FIFA')
       RETURNING referee_id
     `;
 

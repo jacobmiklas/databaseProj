@@ -15,8 +15,6 @@ export default function RefereesTab() {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    email: '',
-    phone: '',
     certification_level: ''
   });
 
@@ -28,7 +26,10 @@ export default function RefereesTab() {
     try {
       const result = await sql`
         SELECT 
-          r.*,
+          r.referee_id,
+          r.first_name,
+          r.last_name,
+          r.experience AS certification_level,
           COUNT(m.match_id) as matches_officiated
         FROM referees r
         LEFT JOIN matches m ON r.referee_id = m.referee_id
@@ -48,8 +49,6 @@ export default function RefereesTab() {
     setFormData({
       first_name: '',
       last_name: '',
-      email: '',
-      phone: '',
       certification_level: ''
     });
     setIsModalOpen(true);
@@ -60,9 +59,7 @@ export default function RefereesTab() {
     setFormData({
       first_name: referee.first_name,
       last_name: referee.last_name,
-      email: referee.email,
-      phone: referee.phone,
-      certification_level: referee.certification_level
+      certification_level: referee.experience
     });
     setIsModalOpen(true);
   };
@@ -71,7 +68,7 @@ export default function RefereesTab() {
     if (window.confirm(`Are you sure you want to delete ${referee.first_name} ${referee.last_name}?`)) {
       try {
         await sql`
-          DELETE FROM referee
+          DELETE FROM referees
           WHERE referee_id = ${referee.referee_id}
         `;
         fetchReferees();
@@ -86,24 +83,20 @@ export default function RefereesTab() {
     try {
       if (selectedReferee) {
         await sql`
-          UPDATE referee
+          UPDATE referees
           SET 
             first_name = ${formData.first_name},
             last_name = ${formData.last_name},
-            email = ${formData.email},
-            phone = ${formData.phone},
-            certification_level = ${formData.certification_level}
+            experience = ${formData.certification_level}
           WHERE referee_id = ${selectedReferee.referee_id}
         `;
       } else {
         await sql`
-          INSERT INTO referee (
-            first_name, last_name, email, phone, certification_level
+          INSERT INTO referees (
+            first_name, last_name, experience
           ) VALUES (
             ${formData.first_name},
             ${formData.last_name},
-            ${formData.email},
-            ${formData.phone},
             ${formData.certification_level}
           )
         `;
@@ -121,8 +114,6 @@ export default function RefereesTab() {
       header: 'Name',
       render: (row) => `${row.first_name} ${row.last_name}`
     },
-    { key: 'email', header: 'Email' },
-    { key: 'phone', header: 'Phone' },
     { key: 'matches_officiated', header: 'Matches Officiated' },
     { key: 'certification_level', header: 'Certification Level' }
   ];
@@ -170,28 +161,6 @@ export default function RefereesTab() {
                 required
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
           </div>
 
           <div>
