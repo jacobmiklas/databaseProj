@@ -49,3 +49,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.logo-fixed-left {
+  position: absolute;
+  left: -5.4rem; /* moved 2rem further left */
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4.75rem;
+  width: 4.75rem;
+  object-fit: contain;
+}
+

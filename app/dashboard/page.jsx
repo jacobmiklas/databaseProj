@@ -14,11 +14,9 @@ export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ✅ Get the current tab from URL, default to "leagues"
   const tabParam = searchParams.get("tab") || "leagues";
   const [currentTab, setCurrentTab] = useState(tabParam);
 
-  // ✅ Keep tab state synced with URL
   const handleTabChange = (value) => {
     setCurrentTab(value);
     router.push(`/dashboard?tab=${value}`);
@@ -36,9 +34,10 @@ export default function Dashboard() {
 
   return (
     <div className="container py-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 relative">
+        <img src="/teamLogo.png" alt="Team Logo" className="logo-fixed-left" />
         <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold">Soccer Team Management Dashboard</h1>
+          <h1 className="text-3xl font-bold ml-0">Soccer Team Management Dashboard</h1>
           <button
             onClick={() => router.push("/queries")}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"

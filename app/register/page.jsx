@@ -58,7 +58,7 @@ export default function RegisterPage() {
           <img
             src="/teamLogo.png"
             alt="Team Logo"
-            className="h-16 w-16 object-contain mb-2"
+            className="h-50 w-50 object-contain mb-2"
           />
         </div>
 
