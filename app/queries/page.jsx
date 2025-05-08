@@ -33,7 +33,7 @@ export default function QueriesPage() {
       `
     },
     top_scorers: {
-      name: 'Top Goal Scorers',
+      name: 'Top 10 Goal Scorers',
       description: 'View players with the most goals scored',
       columns: [
         { key: 'player_name', header: 'Player' },
@@ -44,11 +44,11 @@ export default function QueriesPage() {
         SELECT 
           p.first_name || ' ' || p.last_name as player_name,
           t.team_name,
-          COUNT(*) as goals_scored
+          ps.goals_scored
         FROM players p
         JOIN teams t ON p.team_id = t.team_id
-        GROUP BY p.player_id, t.team_id
-        ORDER BY goals_scored DESC
+        JOIN player_stats ps ON p.player_id = ps.player_id
+        ORDER BY ps.goals_scored DESC
         LIMIT 10
       `
     },

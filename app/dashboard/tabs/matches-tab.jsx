@@ -266,6 +266,7 @@ export default function MatchesTab() {
       key: 'date', 
       header: 'Date',
       render: (row) => {
+        if (!row.date) return '';
         const date = new Date(row.date);
         return date.toLocaleString('en-US', {
           year: 'numeric',
