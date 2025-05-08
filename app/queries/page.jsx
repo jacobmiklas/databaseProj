@@ -20,14 +20,12 @@ export default function QueriesPage() {
       columns: [
         { key: 'team_name', header: 'Team' },
         { key: 'player_name', header: 'Player' },
-        { key: 'position', header: 'Position' },
         { key: 'jersey_number', header: 'Jersey #' }
       ],
       query: `
         SELECT 
           t.team_name,
           p.first_name || ' ' || p.last_name as player_name,
-          p.position,
           p.jersey_number
         FROM teams t
         JOIN players p ON t.team_id = p.team_id

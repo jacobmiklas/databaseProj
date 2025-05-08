@@ -153,7 +153,19 @@ export default function MatchesTab() {
           ...matchData
         });
       } else {
-        await createMatch(matchData);
+        const matchId = await createMatch(matchData);
+        // Create default match stats for the new match
+        await createMatchStats({
+          match_id: matchId,
+          possession_home: 50,
+          possession_away: 50,
+          fouls_home: 0,
+          fouls_away: 0,
+          corners_home: 0,
+          corners_away: 0,
+          home_score: 0,
+          away_score: 0
+        });
       }
       setIsModalOpen(false);
       setFormData({
@@ -180,14 +192,14 @@ export default function MatchesTab() {
       const stats = await getMatchStats(match.match_id);
       if (stats) {
         setStatsFormData({
-          possession_home: stats.possession_home || 50,
-          possession_away: stats.possession_away || 50,
-          fouls_home: stats.fouls_home || 0,
-          fouls_away: stats.fouls_away || 0,
-          corners_home: stats.corners_home || 0,
-          corners_away: stats.corners_away || 0,
-          home_score: stats.home_score || 0,
-          away_score: stats.away_score || 0
+          possession_home: stats.possession_home ?? 50,
+          possession_away: stats.possession_away ?? 50,
+          fouls_home: stats.fouls_home ?? 0,
+          fouls_away: stats.fouls_away ?? 0,
+          corners_home: stats.corners_home ?? 0,
+          corners_away: stats.corners_away ?? 0,
+          home_score: stats.home_score ?? 0,
+          away_score: stats.away_score ?? 0
         });
       } else {
         setStatsFormData({
