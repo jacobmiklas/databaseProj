@@ -44,7 +44,7 @@ export default function QueriesPage() {
         SELECT 
           p.first_name || ' ' || p.last_name as player_name,
           t.team_name,
-          ps.goals_scored
+          ps.goals_scored as goals_scored
         FROM players p
         JOIN teams t ON p.team_id = t.team_id
         JOIN player_stats ps ON p.player_id = ps.player_id
@@ -94,153 +94,6 @@ export default function QueriesPage() {
         ORDER BY points DESC, wins DESC
       `
     },
-    team_schedule: {
-      name: 'Team Schedule',
-      description: 'View team schedules with past results',
-      columns: [
-        { key: 'date', header: 'Date' },
-        { key: 'home_team', header: 'Home Team' },
-        { key: 'score', header: 'Score' },
-        { key: 'away_team', header: 'Away Team' }
-      ],
-      query: `
-        SELECT 
-          m.date,
-          ht.team_name as home_team,
-          ms.home_score || ' - ' || ms.away_score as score,
-          at.team_name as away_team
-        FROM matches m
-        JOIN teams ht ON m.home_team_id = ht.team_id
-        JOIN teams at ON m.away_team_id = at.team_id
-        LEFT JOIN match_stats ms ON m.match_id = ms.match_id
-        ORDER BY m.date DESC
-      `
-    },
-    referee_games: {
-      name: 'Referee Games',
-      description: 'View games officiated by each referee',
-      columns: [
-        { key: 'referee_name', header: 'Referee' },
-        { key: 'date', header: 'Date' },
-        { key: 'home_team', header: 'Home Team' },
-        { key: 'away_team', header: 'Away Team' }
-      ],
-      query: `
-        SELECT 
-          r.first_name || ' ' || r.last_name as referee_name,
-          m.date,
-          ht.team_name as home_team,
-          at.team_name as away_team
-        FROM referees r
-        JOIN matches m ON r.referee_id = m.referee_id
-        JOIN teams ht ON m.home_team_id = ht.team_id
-        JOIN teams at ON m.away_team_id = at.team_id
-        ORDER BY r.last_name, m.date DESC
-      `
-    },
-    player_stats: {
-      name: 'Player Career Stats',
-      description: 'View comprehensive player statistics',
-      columns: [
-        { key: 'player_name', header: 'Player' },
-        { key: 'team_name', header: 'Team' },
-        { key: 'games_played', header: 'GP' }
-      ],
-      query: `
-        SELECT 
-          p.first_name || ' ' || p.last_name as player_name,
-          t.team_name,
-          COUNT(DISTINCT m.match_id) as games_played
-        FROM players p
-        JOIN teams t ON p.team_id = t.team_id
-        LEFT JOIN matches m ON t.team_id = m.home_team_id OR t.team_id = m.away_team_id
-        GROUP BY p.player_id, t.team_id
-        ORDER BY games_played DESC
-      `
-    },
-    team_performance: {
-      name: 'Team Performance by Month',
-      description: 'Analyze team performance trends over time',
-      columns: [
-        { key: 'team_name', header: 'Team' },
-        { key: 'month', header: 'Month' },
-        { key: 'games_played', header: 'GP' },
-        { key: 'wins', header: 'W' },
-        { key: 'losses', header: 'L' },
-        { key: 'win_percentage', header: 'Win %' }
-      ],
-      query: `
-        SELECT 
-          t.team_name,
-          TO_CHAR(m.date, 'YYYY-MM') as month,
-          COUNT(m.match_id) as games_played,
-          SUM(CASE 
-            WHEN (m.home_team_id = t.team_id AND ms.home_score > ms.away_score) OR 
-                 (m.away_team_id = t.team_id AND ms.away_score > ms.home_score) THEN 1 
-            ELSE 0 
-          END) as wins,
-          SUM(CASE 
-            WHEN (m.home_team_id = t.team_id AND ms.home_score < ms.away_score) OR 
-                 (m.away_team_id = t.team_id AND ms.away_score < ms.home_score) THEN 1 
-            ELSE 0 
-          END) as losses,
-          ROUND(
-            SUM(CASE 
-              WHEN (m.home_team_id = t.team_id AND ms.home_score > ms.away_score) OR 
-                   (m.away_team_id = t.team_id AND ms.away_score > ms.home_score) THEN 1 
-              ELSE 0 
-            END)::float / NULLIF(COUNT(m.match_id), 0) * 100, 
-            1
-          ) as win_percentage
-        FROM teams t
-        LEFT JOIN matches m ON t.team_id = m.home_team_id OR t.team_id = m.away_team_id
-        LEFT JOIN match_stats ms ON m.match_id = ms.match_id
-        GROUP BY t.team_id, TO_CHAR(m.date, 'YYYY-MM')
-        ORDER BY t.team_name, month DESC
-      `
-    },
-    head_to_head: {
-      name: 'Head-to-Head Records',
-      description: 'View historical performance between teams',
-      columns: [
-        { key: 'team1', header: 'Team 1' },
-        { key: 'team2', header: 'Team 2' },
-        { key: 'team1_wins', header: 'Team 1 Wins' },
-        { key: 'team2_wins', header: 'Team 2 Wins' },
-        { key: 'draws', header: 'Draws' }
-      ],
-      query: `
-        WITH matchups AS (
-          SELECT 
-            LEAST(ht.team_name, at.team_name) as team1,
-            GREATEST(ht.team_name, at.team_name) as team2,
-            CASE 
-              WHEN ms.home_score > ms.away_score AND ht.team_name = LEAST(ht.team_name, at.team_name) THEN 1
-              WHEN ms.away_score > ms.home_score AND at.team_name = LEAST(ht.team_name, at.team_name) THEN 1
-              ELSE 0
-            END as team1_wins,
-            CASE 
-              WHEN ms.home_score > ms.away_score AND ht.team_name = GREATEST(ht.team_name, at.team_name) THEN 1
-              WHEN ms.away_score > ms.home_score AND at.team_name = GREATEST(ht.team_name, at.team_name) THEN 1
-              ELSE 0
-            END as team2_wins,
-            CASE WHEN ms.home_score = ms.away_score THEN 1 ELSE 0 END as draws
-          FROM matches m
-          JOIN teams ht ON m.home_team_id = ht.team_id
-          JOIN teams at ON m.away_team_id = at.team_id
-          LEFT JOIN match_stats ms ON m.match_id = ms.match_id
-        )
-        SELECT 
-          team1,
-          team2,
-          SUM(team1_wins) as team1_wins,
-          SUM(team2_wins) as team2_wins,
-          SUM(draws) as draws
-        FROM matchups
-        GROUP BY team1, team2
-        ORDER BY team1, team2
-      `
-    },
     venue_stats: {
       name: 'Venue Statistics',
       description: 'Analyze match performance by venue',
@@ -265,33 +118,8 @@ export default function QueriesPage() {
         GROUP BY m.location
         ORDER BY total_matches DESC
       `
-    },
-    referee_stats: {
-      name: 'Referee Statistics',
-      description: 'Analyze referee performance and patterns',
-      columns: [
-        { key: 'referee_name', header: 'Referee' },
-        { key: 'matches_officiated', header: 'Matches' },
-        { key: 'avg_goals', header: 'Avg Goals' },
-        { key: 'home_win_percentage', header: 'Home Win %' }
-      ],
-      query: `
-        SELECT 
-          r.first_name || ' ' || r.last_name as referee_name,
-          COUNT(m.match_id) as matches_officiated,
-          ROUND(AVG(ms.home_score + ms.away_score), 2) as avg_goals,
-          ROUND(
-            SUM(CASE WHEN ms.home_score > ms.away_score THEN 1 ELSE 0 END)::float / 
-            NULLIF(COUNT(m.match_id), 0) * 100, 
-            1
-          ) as home_win_percentage
-        FROM referees r
-        JOIN matches m ON r.referee_id = m.referee_id
-        LEFT JOIN match_stats ms ON m.match_id = ms.match_id
-        GROUP BY r.referee_id
-        ORDER BY matches_officiated DESC
-      `
     }
+
   };
 
   useEffect(() => {
