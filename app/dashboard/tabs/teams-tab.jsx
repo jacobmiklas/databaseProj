@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '../../components/ui/data-table';
 import Modal from '../../components/ui/modal';
-
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL);
@@ -19,6 +19,8 @@ export default function TeamsTab() {
     league_id: '',
     coach_name: ''
   });
+
+  const router = useRouter();
 
   useEffect(() => {
     fetchTeams();
@@ -66,11 +68,7 @@ export default function TeamsTab() {
 
   const fetchLeagues = async () => {
     try {
-      const result = await sql`
-        SELECT league_id, name
-        FROM leagues
-        ORDER BY name
-      `;
+      const result = await sql`SELECT league_id, name FROM leagues ORDER BY name`;
       setLeagues(result);
     } catch (error) {
       console.error('Error fetching leagues:', error);
@@ -79,11 +77,7 @@ export default function TeamsTab() {
 
   const handleAdd = () => {
     setSelectedTeam(null);
-    setFormData({
-      team_name: '',
-      league_id: '',
-      coach_name: ''
-    });
+    setFormData({ team_name: '', league_id: '', coach_name: '' });
     setIsModalOpen(true);
   };
 
@@ -100,10 +94,7 @@ export default function TeamsTab() {
   const handleDelete = async (team) => {
     if (window.confirm(`Are you sure you want to delete ${team.team_name}?`)) {
       try {
-        await sql`
-          DELETE FROM team
-          WHERE team_id = ${team.team_id}
-        `;
+        await sql`DELETE FROM teams WHERE team_id = ${team.team_id}`;
         fetchTeams();
       } catch (error) {
         console.error('Error deleting team:', error);
@@ -141,6 +132,11 @@ export default function TeamsTab() {
     }
   };
 
+  const handleSchedule = (team) => {
+    // ✅ Use push (not replace) so Teams tab stays in history
+    router.push(`/dashboard/schedule/${team.team_id}`);
+  };
+
   const columns = [
     { key: 'team_name', header: 'Team Name' },
     { key: 'coach_name', header: 'Coach' },
@@ -148,15 +144,11 @@ export default function TeamsTab() {
     { 
       key: 'record', 
       header: 'Record (W-L-D)',
-      render: (row) => {
-        return `${row.wins || 0}-${row.losses || 0}-${row.draws || 0}`;
-      }
+      render: (row) => `${row.wins || 0}-${row.losses || 0}-${row.draws || 0}`
     }
   ];
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <>
@@ -166,6 +158,7 @@ export default function TeamsTab() {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onSchedule={handleSchedule}
         title="Teams"
         searchPlaceholder="Search teams..."
       />
@@ -182,7 +175,7 @@ export default function TeamsTab() {
               type="text"
               value={formData.team_name}
               onChange={(e) => setFormData({ ...formData, team_name: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
               required
             />
           </div>
@@ -192,7 +185,7 @@ export default function TeamsTab() {
             <select
               value={formData.league_id}
               onChange={(e) => setFormData({ ...formData, league_id: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
               required
             >
               <option value="">Select a league</option>
@@ -210,7 +203,7 @@ export default function TeamsTab() {
               type="text"
               value={formData.coach_name}
               onChange={(e) => setFormData({ ...formData, coach_name: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
               required
             />
           </div>
