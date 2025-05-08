@@ -9,24 +9,18 @@ export function DataTable({
   onDelete,
   onAdd,
   onViewStats,
+  onSchedule,
   title,
   searchPlaceholder = "Search...",
   filterComponent
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredData = data.filter(item => 
-    Object.values(item).some(value => 
+  const filteredData = data.filter(item =>
+    Object.values(item).some(value =>
       String(value).toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
-
-  const renderCell = (row, column) => {
-    if (column.render) {
-      return column.render(row);
-    }
-    return row[column.key];
-  };
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -42,7 +36,7 @@ export function DataTable({
             </button>
           )}
         </div>
-        
+
         <div className="flex gap-4">
           <input
             type="text"
@@ -67,7 +61,7 @@ export function DataTable({
                   {column.header}
                 </th>
               ))}
-              {(onEdit || onDelete || onViewStats) && (
+              {(onEdit || onDelete || onViewStats || onSchedule) && (
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -87,8 +81,16 @@ export function DataTable({
                       </td>
                     );
                   })}
-                  {(onEdit || onDelete || onViewStats) && (
+                  {(onEdit || onDelete || onViewStats || onSchedule) && (
                     <td key={`${rowId}-actions`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {onSchedule && (
+                        <button
+                          onClick={() => onSchedule(row)}
+                          className="text-yellow-600 hover:text-yellow-900 mr-4"
+                        >
+                          Schedule
+                        </button>
+                      )}
                       {onViewStats && (
                         <button
                           onClick={() => onViewStats(row)}
@@ -123,4 +125,4 @@ export function DataTable({
       </div>
     </div>
   );
-} 
+}
