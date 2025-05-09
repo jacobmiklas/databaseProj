@@ -8,47 +8,31 @@ import { useRouter } from 'next/navigation';
 const sql = neon(process.env.DATABASE_URL);
 
 export default function QueriesPage() {
-  const [activeQuery, setActiveQuery] = useState('team_rosters');
+  const [activeQuery, setActiveQuery] = useState('top_scorers');
   const [queryResults, setQueryResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const queries = {
-    team_rosters: {
-      name: 'Team Rosters',
-      description: 'View complete team rosters with player details',
-      columns: [
-        { key: 'team_name', header: 'Team' },
-        { key: 'player_name', header: 'Player' },
-        { key: 'jersey_number', header: 'Jersey #' }
-      ],
-      query: `
-        SELECT 
-          t.team_name,
-          p.first_name || ' ' || p.last_name as player_name,
-          p.jersey_number
-        FROM teams t
-        JOIN players p ON t.team_id = p.team_id
-        ORDER BY t.team_name, p.jersey_number
-      `
-    },
     top_scorers: {
-      name: 'Top 10 Goal Scorers',
-      description: 'View players with the most goals scored',
+      name: 'Top 10 Goal Contributors',
+      description: 'View players with the most goal contributions',
       columns: [
         { key: 'player_name', header: 'Player' },
         { key: 'team_name', header: 'Team' },
-        { key: 'goals_scored', header: 'Goals' }
+        { key: 'goals_scored', header: 'Goals' },
+        { key: 'assists', header: 'Assists' }
       ],
       query: `
         SELECT 
           p.first_name || ' ' || p.last_name as player_name,
           t.team_name,
-          ps.goals_scored as goals_scored
+          ps.goals_scored as goals_scored,
+          ps.assists as assists
         FROM players p
         JOIN teams t ON p.team_id = t.team_id
         JOIN player_stats ps ON p.player_id = ps.player_id
-        ORDER BY ps.goals_scored DESC
+        ORDER BY ps.goals_scored + ps.assists DESC
         LIMIT 10
       `
     },
