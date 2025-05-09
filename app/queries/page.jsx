@@ -52,6 +52,52 @@ export default function QueriesPage() {
         LIMIT 10
       `
     },
+    least_disciplined: {
+      name: 'Top 5 Least Disciplined Teams',
+      description: 'View teams with the most cards',
+      columns: [
+        { key: 'team_name', header: 'Team' },
+        { key: 'ycards', header: 'Yellow Cards' },
+        { key: 'rcards', header: 'Red Cards' },
+      ],
+      query: `
+        SELECT sum(yellow_cards) as ycards, sum(red_cards) as rcards, t.team_name
+        FROM players p
+        JOIN teams t on p.team_id = t.team_id
+        JOIN player_stats ps on p.player_id = ps.player_id
+        GROUP BY team_name
+        ORDER BY SUM(yellow_cards) + SUM(red_cards) DESC, team_name ASC
+        LIMIT 5
+      `
+    },
+    defensive_teams: {
+      name: 'Top 5 Most Defensive Teams',
+      description: 'View teams with the most clean sheets and least goals against',
+      columns: [
+        { key: 'team_name', header: 'Team' },
+        { key: 'csheets', header: 'Clean Sheets' },
+        { key: 'lgoals', header: 'Goals Against' },
+      ],
+      query: `
+        SELECT sum(yellow_cards) as ycards, sum(red_cards) as rcards, t.team_name
+        SUM(CASE 
+            WHEN (ms.home_score = 0 AND ms.home_score > ms.away_score) OR 
+                 (m.away_team_id = t.team_id AND ms.away_score > ms.home_score) THEN 1 
+            ELSE 0 
+          END) as wins,
+          SUM(CASE 
+            WHEN (m.home_team_id = t.team_id AND ms.home_score < ms.away_score) OR 
+                 (m.away_team_id = t.team_id AND ms.away_score < ms.home_score) THEN 1 
+            ELSE 0 
+          END) as losses,
+        FROM players p
+        JOIN teams t on p.team_id = t.team_id
+        JOIN player_stats ps on p.player_id = ps.player_id
+        GROUP BY team_name
+        ORDER BY SUM(yellow_cards) + SUM(red_cards) DESC, team_name ASC
+        LIMIT 5
+      `
+    },
     league_standings: {
       name: 'League Standings',
       description: 'Current league standings sorted by points',
