@@ -22,6 +22,24 @@ export function DataTable({
     )
   );
 
+  // Generate a unique key for a row based on its content
+  const generateRowKey = (row, index) => {
+    // First try to use any available ID fields
+    const idField = row.id || row.match_id || row.player_id || row.team_id || row.league_id || row.referee_id;
+    if (idField) {
+      return `row-${idField}`;
+    }
+
+    // If no ID is available, create a key from the row's content
+    const contentKey = columns
+      .map(col => String(row[col.key] || ''))
+      .filter(Boolean)
+      .join('-');
+    
+    // If we have content, use it with the index as a fallback
+    return contentKey ? `row-${contentKey}-${index}` : `row-${index}`;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b">
@@ -69,20 +87,17 @@ export function DataTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredData.map((row) => {
-              const rowId = row.player_id || row.team_id || row.league_id || row.match_id || row.referee_id || Math.random().toString(36).substring(7);
+            {filteredData.map((row, index) => {
+              const rowKey = generateRowKey(row, index);
               return (
-                <tr key={rowId}>
-                  {columns.map((column, index) => {
-                    const cellKey = column.key || `col-${index}`;
-                    return (
-                      <td key={`${rowId}-${cellKey}`} className="px-6 py-4 whitespace-nowrap">
-                        {column.render ? column.render(row) : row[column.key]}
-                      </td>
-                    );
-                  })}
+                <tr key={rowKey}>
+                  {columns.map((column) => (
+                    <td key={`${rowKey}-${column.key}`} className="px-6 py-4 whitespace-nowrap">
+                      {column.render ? column.render(row) : row[column.key]}
+                    </td>
+                  ))}
                   {(onEdit || onDelete || onViewStats || onSchedule) && (
-                    <td key={`${rowId}-actions`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td key={`${rowKey}-actions`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {onSchedule && (
                         <button
                           onClick={() => onSchedule(row)}

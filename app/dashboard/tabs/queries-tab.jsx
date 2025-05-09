@@ -60,6 +60,7 @@ export default function QueriesTab() {
       description: 'Current league standings sorted by points',
       columns: [
         { key: 'team_name', header: 'Team' },
+        { key: 'league_name', header: 'League' },
         { key: 'games_played', header: 'GP' },
         { key: 'wins', header: 'W' },
         { key: 'losses', header: 'L' },
@@ -69,6 +70,7 @@ export default function QueriesTab() {
       query: `
         SELECT 
           t.team_name,
+          l.name as league_name,
           COUNT(m.match_id) as games_played,
           SUM(CASE 
             WHEN (m.home_team_id = t.team_id AND ms.home_score > ms.away_score) OR 
@@ -91,8 +93,9 @@ export default function QueriesTab() {
             ELSE 0 
           END) as points
         FROM teams t
-        LEFT JOIN matches m ON t.team_id = m.home_team_id OR t.team_id = m.away_team_id
-        LEFT JOIN match_stats ms ON m.match_id = ms.match_id
+        JOIN matches m ON t.team_id = m.home_team_id OR t.team_id = m.away_team_id
+        JOIN match_stats ms ON m.match_id = ms.match_id
+        JOIN leagues l ON t.league_id = l.league_id
         GROUP BY t.team_id
         ORDER BY points DESC, wins DESC
       `

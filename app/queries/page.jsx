@@ -50,7 +50,7 @@ export default function QueriesPage() {
         JOIN teams t on p.team_id = t.team_id
         JOIN player_stats ps on p.player_id = ps.player_id
         GROUP BY team_name
-        ORDER BY SUM(yellow_cards) + SUM(red_cards) DESC, team_name ASC
+        ORDER BY SUM(yellow_cards) + SUM(red_cards) DESC, SUM(red_cards) DESC, team_name ASC
         LIMIT 5
       `
     },
@@ -88,6 +88,7 @@ export default function QueriesPage() {
       description: 'Current league standings sorted by points',
       columns: [
         { key: 'team_name', header: 'Team' },
+        { key: 'league_name', header: 'League' },
         { key: 'games_played', header: 'GP' },
         { key: 'wins', header: 'W' },
         { key: 'losses', header: 'L' },
@@ -96,6 +97,7 @@ export default function QueriesPage() {
       ],
       query: `
         SELECT 
+          l.name as league_name,
           t.team_name,
           COUNT(m.match_id) as games_played,
           SUM(CASE 
@@ -119,10 +121,11 @@ export default function QueriesPage() {
             ELSE 0 
           END) as points
         FROM teams t
+        JOIN leagues l ON t.league_id = l.league_id
         LEFT JOIN matches m ON t.team_id = m.home_team_id OR t.team_id = m.away_team_id
         LEFT JOIN match_stats ms ON m.match_id = ms.match_id
-        GROUP BY t.team_id
-        ORDER BY points DESC, wins DESC
+        GROUP BY l.name, t.team_name
+        ORDER BY l.name, points DESC, wins DESC
       `
     },
     venue_stats: {
@@ -210,7 +213,7 @@ export default function QueriesPage() {
           <DataTable
             columns={queries[activeQuery].columns}
             data={queryResults}
-            title={queries[activeQuery].name}
+            
           />
         )}
       </div>

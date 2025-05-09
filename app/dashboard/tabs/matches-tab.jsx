@@ -45,7 +45,13 @@ export default function MatchesTab() {
     try {
       const result = await sql`
         SELECT 
-          m.*,
+          m.match_id,
+          m.date,
+          m.location,
+          m.league_id,
+          m.home_team_id,
+          m.away_team_id,
+          m.referee_id,
           ht.team_name as home_team_name,
           at.team_name as away_team_name,
           r.first_name as referee_first_name,
@@ -65,7 +71,10 @@ export default function MatchesTab() {
         LEFT JOIN match_stats ms ON m.match_id = ms.match_id
         ORDER BY m.date DESC
       `;
-      setMatches(result);
+      setMatches(result.map(match => ({
+        ...match,
+        id: `match-${match.match_id}` // Ensure unique ID for each match
+      })));
     } catch (error) {
       console.error('Error fetching matches:', error);
     } finally {
@@ -280,7 +289,7 @@ export default function MatchesTab() {
     { key: 'location', header: 'Location' },
     { key: 'home_team_name', header: 'Home Team' },
     { 
-      key: 'score', 
+      key: 'match_score',
       header: 'Score',
       render: (row) => {
         return `${row.home_score || 0} - ${row.away_score || 0}`;
@@ -288,9 +297,9 @@ export default function MatchesTab() {
     },
     { key: 'away_team_name', header: 'Away Team' },
     { 
-      key: 'referee', 
+      key: 'referee_name', 
       header: 'Referee',
-      render: (row) => `${row.referee_first_name} ${row.referee_last_name}`
+      render: (row) => `${row.referee_first_name || ''} ${row.referee_last_name || ''}`.trim() || 'Not Assigned'
     }
   ];
 
