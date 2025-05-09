@@ -75,27 +75,28 @@ export default function QueriesPage() {
       description: 'View teams with the most clean sheets and least goals against',
       columns: [
         { key: 'team_name', header: 'Team' },
-        { key: 'csheets', header: 'Clean Sheets' },
-        { key: 'lgoals', header: 'Goals Against' },
+        { key: 'clean_sheets', header: 'Clean Sheets' },
+        { key: 'goals_against', header: 'Goals Against' },
       ],
       query: `
-        SELECT sum(yellow_cards) as ycards, sum(red_cards) as rcards, t.team_name
-        SUM(CASE 
-            WHEN (ms.home_score = 0 AND ms.home_score > ms.away_score) OR 
-                 (m.away_team_id = t.team_id AND ms.away_score > ms.home_score) THEN 1 
-            ELSE 0 
-          END) as wins,
-          SUM(CASE 
-            WHEN (m.home_team_id = t.team_id AND ms.home_score < ms.away_score) OR 
-                 (m.away_team_id = t.team_id AND ms.away_score < ms.home_score) THEN 1 
-            ELSE 0 
-          END) as losses,
-        FROM players p
-        JOIN teams t on p.team_id = t.team_id
-        JOIN player_stats ps on p.player_id = ps.player_id
-        GROUP BY team_name
-        ORDER BY SUM(yellow_cards) + SUM(red_cards) DESC, team_name ASC
-        LIMIT 5
+         SELECT 
+           t.team_name as team_name,
+           SUM(CASE 
+             WHEN (m.home_team_id = t.team_id AND ms.away_score = 0) OR 
+                  (m.away_team_id = t.team_id AND ms.home_score = 0) THEN 1 
+             ELSE 0 
+           END) as clean_sheets,
+           SUM(CASE 
+             WHEN (m.home_team_id = t.team_id) THEN ms.away_score
+             ELSE 
+                 ms.home_score
+           END) as goals_against
+         FROM teams t
+         LEFT JOIN matches m ON t.team_id = m.home_team_id OR t.team_id = m.away_team_id
+         LEFT JOIN match_stats ms ON m.match_id = ms.match_id
+         GROUP BY team_name
+         ORDER BY clean_sheets DESC, goals_against ASC
+         LIMIT 5
       `
     },
     league_standings: {
